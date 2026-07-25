@@ -1,0 +1,7 @@
+// Dev environment. Values here become build settings; INFOPLIST_KEY_* settings in
+// project.yml copy the ones the app reads at runtime into Info.plist.
+// Note: "//" starts a comment in xcconfig syntax, so URLs escape it as "\/\/".
+APP_NAME = AppTemplate (Dev)
+APP_BUNDLE_IDENTIFIER = com.yourcompany.apptemplate.dev
+BASE_URL = https:\/\/dev-api.example.com
+ENV_NAME = Dev

@@ -1,0 +1,123 @@
+name: AppTemplate
+options:
+  bundleIdPrefix: com.yourcompany
+  deploymentTarget:
+    iOS: "17.0"
+  generateEmptyDirectories: true
+  autogenerateSchemes: false
+configs:
+  Debug-DEV: debug
+  Release-DEV: release
+  Debug-QA: debug
+  Release-QA: release
+  Debug-PROD: debug
+  Release-PROD: release
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+    INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    ENABLE_PREVIEWS: YES
+targets:
+  AppTemplate:
+    type: application
+    platform: iOS
+    sources:
+      - path: AppTemplate
+    configFiles:
+      Debug-DEV: AppTemplate/Config/DevConfig.xcconfig
+      Release-DEV: AppTemplate/Config/DevConfig.xcconfig
+      Debug-QA: AppTemplate/Config/QAConfig.xcconfig
+      Release-QA: AppTemplate/Config/QAConfig.xcconfig
+      Debug-PROD: AppTemplate/Config/ProdConfig.xcconfig
+      Release-PROD: AppTemplate/Config/ProdConfig.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_IDENTIFIER)
+        PRODUCT_NAME: AppTemplate
+        INFOPLIST_KEY_CFBundleDisplayName: $(APP_NAME)
+        INFOPLIST_KEY_APIBaseURL: $(BASE_URL)
+        INFOPLIST_KEY_ENVName: $(ENV_NAME)
+    preBuildScripts:
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "${CI}" = "true" ]; then echo "Skipping SwiftLint in CI"; exit 0; fi
+          if [[ "$(uname -m)" == arm64 ]]; then export PATH="/opt/homebrew/bin:$PATH"; fi
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint
+          else
+            echo "warning: swiftlint not found - see https://github.com/realm/SwiftLint#installation"
+          fi
+
+  AppTemplateTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AppTemplateTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.apptemplate.tests
+    dependencies:
+      - target: AppTemplate
+
+schemes:
+  AppTemplate-Dev:
+    build:
+      targets:
+        AppTemplate: all
+        AppTemplateTests: [test]
+    run:
+      config: Debug-DEV
+    test:
+      config: Debug-DEV
+      targets: [AppTemplateTests]
+    profile:
+      config: Release-DEV
+    analyze:
+      config: Debug-DEV
+    archive:
+      config: Release-DEV
+
+  AppTemplate-QA:
+    build:
+      targets:
+        AppTemplate: all
+        AppTemplateTests: [test]
+    run:
+      config: Debug-QA
+    test:
+      config: Debug-QA
+      targets: [AppTemplateTests]
+    profile:
+      config: Release-QA
+    analyze:
+      config: Debug-QA
+    archive:
+      config: Release-QA
+
+  AppTemplate-Prod:
+    build:
+      targets:
+        AppTemplate: all
+        AppTemplateTests: [test]
+    run:
+      config: Debug-PROD
+    test:
+      config: Debug-PROD
+      targets: [AppTemplateTests]
+    profile:
+      config: Release-PROD
+    analyze:
+      config: Debug-PROD
+    archive:
+      config: Release-PROD
