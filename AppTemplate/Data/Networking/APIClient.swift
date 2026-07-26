@@ -120,10 +120,10 @@ struct URLSessionAPIClient: APIClient {
         let urlRequest = await buildURLRequest(for: request)
         let (data, http) = try await performWithRetries(urlRequest, method: request.method)
 
-        if http.statusCode == 401, !didRetryAfterRefresh, let authTokenRefresher {
+        if http.statusCode == HTTPStatusCode.unauthorized, !didRetryAfterRefresh, let authTokenRefresher {
             return try await retryAfterRefresh(request, using: authTokenRefresher)
         }
-        guard (200..<300).contains(http.statusCode) else {
+        guard HTTPStatusCode.isSuccess(http.statusCode) else {
             throw mapFailure(statusCode: http.statusCode, data: data)
         }
         return try decode(data)
@@ -193,7 +193,7 @@ struct URLSessionAPIClient: APIClient {
         while true {
             do {
                 let (data, http) = try await perform(urlRequest)
-                let shouldRetry = (500..<600).contains(http.statusCode)
+                let shouldRetry = HTTPStatusCode.isServerError(http.statusCode)
                     && retryPolicy.shouldRetry(method: method, attempt: attempt)
                 guard shouldRetry else { return (data, http) }
                 try await Task.sleep(for: retryPolicy.delay(forAttempt: attempt))
@@ -209,7 +209,7 @@ struct URLSessionAPIClient: APIClient {
     private func isTransient(_ error: AppError) -> Bool {
         if case .network(.noConnection) = error { return true }
         guard case .network(.requestFailed(let statusCode, _)) = error else { return false }
-        return statusCode == -1 || (500..<600).contains(statusCode)
+        return statusCode == HTTPStatusCode.noResponse || HTTPStatusCode.isServerError(statusCode)
     }
 
     private func perform(_ urlRequest: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -224,7 +224,9 @@ struct URLSessionAPIClient: APIClient {
             throw AppError.network(.noConnection)
         } catch is URLError {
             notify(nil, nil, urlRequest, start)
-            throw AppError.network(.requestFailed(statusCode: -1, message: "The request timed out."))
+            throw AppError.network(
+                .requestFailed(statusCode: HTTPStatusCode.noResponse, message: "The request timed out.")
+            )
         } catch {
             notify(nil, nil, urlRequest, start)
             throw AppError.network(.invalidResponse)

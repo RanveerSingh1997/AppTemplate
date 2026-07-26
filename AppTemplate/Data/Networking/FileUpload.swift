@@ -89,14 +89,18 @@ final class UploadProgressObserver: NSObject, URLSessionTaskDelegate, URLSession
         defer { continuation.finish() }
 
         if let error {
-            continuation.yield(.failed(.network(.requestFailed(statusCode: -1, message: error.localizedDescription))))
+            let failure = AppError.NetworkFailure.requestFailed(
+                statusCode: HTTPStatusCode.noResponse,
+                message: error.localizedDescription
+            )
+            continuation.yield(.failed(.network(failure)))
             return
         }
         guard let http = task.response as? HTTPURLResponse else {
             continuation.yield(.failed(.network(.invalidResponse)))
             return
         }
-        guard (200..<300).contains(http.statusCode) else {
+        guard HTTPStatusCode.isSuccess(http.statusCode) else {
             continuation.yield(.failed(.network(.requestFailed(statusCode: http.statusCode, message: nil))))
             return
         }

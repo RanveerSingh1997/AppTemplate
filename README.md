@@ -93,9 +93,11 @@ because most real apps need them soon — but nothing in the app calls them yet.
 - **`ReachabilityService`** (`Domain/Services/ReachabilityService.swift`) — connectivity
   check via `NWPathMonitor`. Plug into a repository (check before a network call) or an
   offline banner.
-- **`EventLogger`** (`Domain/Services/EventLogger.swift`) — leveled logging seam
-  (`ConsoleEventLogger` prints to stdout today; swap for a real analytics/crash-reporting
-  SDK's logger later without touching any call site).
+
+`EventLogger` (`Domain/Services/EventLogger.swift`) *is* wired in — `LoggingInterceptor`
+uses it to log every request's method/path/status/duration. `ConsoleEventLogger` (prints
+to stdout) is the only implementation, though; swap it for a real analytics/crash-reporting
+SDK's logger later without touching `LoggingInterceptor` or any other call site.
 
 These are intentionally untested beyond compiling — a test that only proves the mock
 returns what you told it to return isn't real coverage. Test them once something depends
@@ -175,6 +177,10 @@ starting sketch. Every piece below is a real, tested implementation, not a stub:
   the per-call-site `JSONEncoder().encode(...)` boilerplate `ItemRepositoryImpl` used to have.
 - **Every HTTP verb, one `send` method**: `APIRequest.method` + `.requiresAuth` cover
   GET/POST/PUT/DELETE and public-vs-authenticated endpoints without new protocol methods.
+- **Status codes in one place**: `HTTPStatusCode.swift` is the only file with a bare `401`
+  or a `200..<300` range — `isSuccess`/`isClientError`/`isServerError`/`unauthorized` are
+  used everywhere else, so a status-handling change never means hunting for every inline
+  range across `APIClient.swift`, `FileUpload.swift`, and `APIClientInterceptor.swift`.
 
 Tested directly (not just through the mock repository) in
 `AppTemplateTests/URLSessionAPIClientTests.swift`, which stubs `URLProtocol` to exercise

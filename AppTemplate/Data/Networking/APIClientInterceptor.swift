@@ -53,12 +53,11 @@ struct LoggingInterceptor: APIClientInterceptor {
         }
 
         let message = "\(method) \(path) -> \(http.statusCode) (\(durationMs)ms)"
-        switch http.statusCode {
-        case 200..<300:
+        if HTTPStatusCode.isSuccess(http.statusCode) {
             logger.info(message, category: .network)
-        case 400..<500:
+        } else if HTTPStatusCode.isClientError(http.statusCode) {
             logger.warn(message, category: .network)
-        default:
+        } else {
             logger.error(message, category: .network)
         }
     }
