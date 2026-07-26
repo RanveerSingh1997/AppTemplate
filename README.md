@@ -1,5 +1,7 @@
 # AppTemplate
 
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/RanveerSingh1997)
+
 A starting-point SwiftUI iOS app: Clean Architecture (Core / Domain / Data / Presentation),
 a Coordinator for navigation, one small DI container, a repository pattern with mock/live
 swapping, and a DTO -> Domain -> Persistence mapping layer. It's a rebuilt version of the
