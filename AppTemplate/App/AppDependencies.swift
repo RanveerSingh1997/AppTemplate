@@ -59,7 +59,11 @@ final class AppDependencies {
             itemRepository = ItemRepositoryImpl(
                 apiClient: URLSessionAPIClient(
                     baseURL: baseURL,
-                    interceptors: [authInterceptor, LoggingInterceptor(logger: consoleLogger)],
+                    interceptors: [
+                        CorrelationIDInterceptor(),
+                        authInterceptor,
+                        LoggingInterceptor(logger: consoleLogger)
+                    ],
                     // No auth flow yet, so no refresh action exists to call on a 401 —
                     // add one (e.g. calling an AuthRepository's refresh) once you have one.
                     authTokenRefresher: nil

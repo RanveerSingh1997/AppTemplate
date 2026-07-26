@@ -48,4 +48,18 @@ struct MockItemRepositoryImplTests {
         let fetched = try await repository.fetchItem(id: "1")
         #expect(fetched == nil)
     }
+
+    @Test
+    func fetchItemsFiltersBySearchTerm() async throws {
+        let repository = MockItemRepositoryImpl()
+        let results = try await repository.fetchItems(search: "second")
+        #expect(results.map(\.title) == ["Second Item"])
+    }
+
+    @Test
+    func fetchItemsWithNilSearchReturnsEverything() async throws {
+        let repository = MockItemRepositoryImpl()
+        let results = try await repository.fetchItems(search: nil)
+        #expect(results.count == MockItemRepositoryImpl.sampleItems.count)
+    }
 }

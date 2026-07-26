@@ -4,6 +4,7 @@ import Foundation
 /// else in `Data/Networking` compares against a bare `401` or `(500..<600)` inline.
 enum HTTPStatusCode {
     static let unauthorized = 401
+    static let notFound = 404
 
     /// Sentinel for failures that never got a real HTTP status (timeouts, transport errors)
     /// before they're wrapped in `AppError.network(.requestFailed)`. Not a code a server

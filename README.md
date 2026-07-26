@@ -66,8 +66,9 @@ branching needed.
 Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
 
 1. **Domain**: model + repository protocol (`Domain/Models`, `Domain/Repositories`).
-2. **Data**: `ItemDTO` (network shape), an `EntityMapper` conformance mapping DTO <->
-   persistence entity, and two repository implementations (live, mock).
+2. **Data**: a case in `APIEndpoint` for each new route (never a path string built inline
+   in a repository method), `ItemDTO` (network shape), an `EntityMapper` conformance
+   mapping DTO <-> persistence entity, and two repository implementations (live, mock).
 3. **Presentation**: `@Observable @MainActor` ViewModel + `View`, taking the ViewModel
    in its initializer (never constructing it itself — that's `AppDependencies`' job).
    Validation errors and save/load failures both surface through `AppError`.
@@ -187,13 +188,37 @@ Tested directly (not just through the mock repository) in
 the auth header, error-message decoding, and retry-policy logic against real (intercepted)
 HTTP round-trips.
 
+## Architecture rules (enforced, not just documented)
+
+These aren't style preferences — two of them are wired into `.swiftlint.yml`'s
+`custom_rules` with `severity: error`, which makes the SwiftLint build phase (see
+`project.yml`) exit non-zero and **fail the build**, not just print a warning. A developer
+can't quietly route around the pattern by "just this once" reaching for a concrete type
+or a singleton — the build stops them.
+
+1. **Every swappable dependency is defined by a protocol; Presentation depends only on the
+   protocol.** `ItemRepository` (protocol) + `ItemRepositoryImpl`/`MockItemRepositoryImpl`
+   (implementations) is the shape to copy for every new repository/service. Enforced by
+   the `no_concrete_impl_outside_composition_root` custom rule: any `...Impl`/`...ServiceImpl`
+   identifier appearing under `Presentation/` fails the build. Only `AppDependencies` (the
+   composition root) may construct one.
+2. **No new singletons.** Enforced by the `no_new_singletons` custom rule: a `static let
+   shared =`/`static var shared =` anywhere under `Domain/`, `Data/`, or `Presentation/`
+   fails the build. Add the dependency to `AppDependencies` and inject it through an
+   initializer instead — see "No singletons" under Fixes, below.
+3. **Every new repository/service ships a protocol, a real implementation, and a mock**
+   (`Domain/Repositories/ItemRepository.swift` +
+   `Data/Repositories/{ItemRepositoryImpl,MockItemRepositoryImpl}.swift`). Not mechanically
+   enforced (SwiftLint can't verify a matching file exists) — this one is on code review,
+   but the existing three files are the reference to copy exactly.
+4. **Layering follows Clean Architecture's dependency rule.** `Domain/` imports only
+   `Foundation` — no SwiftData, no URLSession, no SwiftUI. `Data/` depends inward on
+   `Domain`'s protocols. `Presentation/` depends only on `Domain` protocols, never on
+   concrete `Data` types (this is rule 1, restated as the general principle it's an
+   instance of).
+
 ## Architecture notes
 
-- **Layering (Clean Architecture's dependency rule)**: `Domain/` imports only
-  `Foundation` — no SwiftData, no URLSession, no SwiftUI. `Data/` depends inward on
-  `Domain`'s protocols. `Presentation/` depends only on `Domain` protocols, never on
-  concrete `Data` types. Only `App/AppDependencies.swift` (the composition root) is
-  allowed to know about concrete `Data` types.
 - **`AppError`** (`Domain/AppError.swift`) is the one error vocabulary every layer
   throws — network/persistence/validation/configuration — so ViewModels switch on one
   type instead of learning what each dependency happens to throw.

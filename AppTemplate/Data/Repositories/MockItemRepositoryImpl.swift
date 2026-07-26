@@ -10,8 +10,9 @@ final class MockItemRepositoryImpl: ItemRepository {
         self.items = items
     }
 
-    func fetchItems() async throws -> [Item] {
-        items
+    func fetchItems(search: String?) async throws -> [Item] {
+        guard let search, !search.isEmpty else { return items }
+        return items.filter { $0.title.localizedCaseInsensitiveContains(search) }
     }
 
     func fetchItem(id: String) async throws -> Item? {

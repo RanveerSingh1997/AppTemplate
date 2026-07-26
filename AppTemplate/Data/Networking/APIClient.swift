@@ -4,6 +4,7 @@ enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
     case put = "PUT"
+    case patch = "PATCH"
     case delete = "DELETE"
 }
 
@@ -45,6 +46,40 @@ extension APIRequest {
         self.queryItems = queryItems
         self.headers = headers
         self.requiresAuth = requiresAuth
+    }
+
+    /// Builds verb + path + query together from one `APIEndpoint` case — a call site never
+    /// picks `method:` separately (and so can never pass the wrong verb for a route), the
+    /// same reason `APIEndpoint.fetchItems(search:)` takes a `String?` instead of a caller
+    /// assembling `URLQueryItem(name: "search", value:)` itself.
+    init(
+        endpoint: APIEndpoint,
+        headers: [String: String] = [:],
+        body: Data? = nil,
+        requiresAuth: Bool = true
+    ) {
+        self.path = endpoint.path
+        self.method = endpoint.method
+        self.queryItems = endpoint.queryItems
+        self.headers = headers
+        self.body = body
+        self.requiresAuth = requiresAuth
+    }
+
+    init<Body: Encodable>(
+        endpoint: APIEndpoint,
+        headers: [String: String] = [:],
+        json: Body,
+        requiresAuth: Bool = true
+    ) throws {
+        try self.init(
+            path: endpoint.path,
+            method: endpoint.method,
+            queryItems: endpoint.queryItems,
+            headers: headers,
+            json: json,
+            requiresAuth: requiresAuth
+        )
     }
 }
 

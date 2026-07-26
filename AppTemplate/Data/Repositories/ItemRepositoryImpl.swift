@@ -3,7 +3,8 @@ import SwiftData
 
 /// Network-first, cache-fallback: fetch DTOs from the API, mirror them into SwiftData via
 /// `ItemMapper`, and map to the domain `Item` shape at the boundary. If the network call
-/// fails, serve the last cached copy (also mapped to `Item`) instead of failing outright.
+/// fails, serve the last cached copy (also mapped to `Item`, filtered by `search` too)
+/// instead of failing outright.
 @MainActor
 final class ItemRepositoryImpl: ItemRepository {
     private let apiClient: APIClient
@@ -16,13 +17,13 @@ final class ItemRepositoryImpl: ItemRepository {
         self.mapper = mapper
     }
 
-    func fetchItems() async throws -> [Item] {
+    func fetchItems(search: String?) async throws -> [Item] {
         do {
-            let dtos: [ItemDTO] = try await apiClient.send(APIRequest(path: "items"))
+            let dtos: [ItemDTO] = try await apiClient.send(APIRequest(endpoint: .fetchItems(search: search)))
             cache(dtos)
             return dtos.map(\.asDomain)
         } catch {
-            let cached = try fetchCached()
+            let cached = try fetchCached(matching: search)
             guard !cached.isEmpty else { throw error }
             return cached
         }
@@ -37,7 +38,7 @@ final class ItemRepositoryImpl: ItemRepository {
         // `id` is a placeholder the server is expected to ignore.
         let payload = ItemDTO(id: "", name: title, description: detail)
         let created: ItemDTO = try await apiClient.send(
-            APIRequest(path: "items", method: .post, json: payload)
+            APIRequest(endpoint: .createItem, json: payload)
         )
         _ = mapper.toEntity(dto: created, context: modelContext)
         return created.asDomain
@@ -45,7 +46,7 @@ final class ItemRepositoryImpl: ItemRepository {
 
     func updateItem(_ item: Item) async throws -> Item {
         let updated: ItemDTO = try await apiClient.send(
-            APIRequest(path: "items/\(item.id)", method: .put, json: item.asDTO)
+            APIRequest(endpoint: .updateItem(id: item.id), json: item.asDTO)
         )
         if let existing = try? modelContext.fetch(FetchDescriptor<CachedItem>())
             .first(where: { $0.id == updated.id }) {
@@ -57,7 +58,9 @@ final class ItemRepositoryImpl: ItemRepository {
     }
 
     func deleteItem(id: String) async throws {
-        let _: EmptyResponse = try await apiClient.send(APIRequest(path: "items/\(id)", method: .delete))
+        let _: EmptyResponse = try await apiClient.send(
+            APIRequest(endpoint: .deleteItem(id: id))
+        )
         if let existing = try? modelContext.fetch(FetchDescriptor<CachedItem>()).first(where: { $0.id == id }) {
             modelContext.delete(existing)
         }
@@ -85,11 +88,14 @@ final class ItemRepositoryImpl: ItemRepository {
         }
     }
 
-    private func fetchCached() throws -> [Item] {
+    private func fetchCached(matching search: String?) throws -> [Item] {
+        let items: [Item]
         do {
-            return try modelContext.fetch(FetchDescriptor<CachedItem>()).map(\.asDomain)
+            items = try modelContext.fetch(FetchDescriptor<CachedItem>()).map(\.asDomain)
         } catch {
             throw AppError.persistence(.fetchFailed)
         }
+        guard let search, !search.isEmpty else { return items }
+        return items.filter { $0.title.localizedCaseInsensitiveContains(search) }
     }
 }

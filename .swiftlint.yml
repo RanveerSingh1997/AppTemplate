@@ -64,4 +64,28 @@ identifier_name:
     - ui
     - qa
 
+# Enforced architecture rules (severity: error fails the SwiftLint build phase, so these
+# are gates, not suggestions — see README's "Architecture rules" section for the reasoning
+# behind each one). Add a new one here, not just to the README, when you find a pattern
+# worth actually blocking rather than hoping code review catches it.
+custom_rules:
+  no_concrete_impl_outside_composition_root:
+    included: ".*/Presentation/.*\\.swift"
+    regex: '\b\w+(RepositoryImpl|ServiceImpl)\b'
+    match_kinds: [identifier, typeidentifier]
+    message: >
+      Presentation code must depend on the protocol (e.g. `ItemRepository`), never a
+      concrete `...Impl` type. Only AppDependencies (the composition root) may construct
+      one — inject it through a ViewModel's initializer instead.
+    severity: error
+
+  no_new_singletons:
+    included: ".*/(Domain|Data|Presentation)/.*\\.swift"
+    regex: 'static\s+(let|var)\s+shared\s*='
+    message: >
+      Don't add a new singleton (`static let/var shared`). Add the dependency to
+      AppDependencies and inject it through an initializer instead — see the README's
+      "No singletons" rule.
+    severity: error
+
 reporter: xcode
