@@ -20,7 +20,7 @@ struct ItemDetailView: View {
                     systemImage: "exclamationmark.triangle",
                     description: Text(message)
                 )
-            case .loaded(let item):
+            case .loaded(let item), .refreshing(let item):
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(item.title).font(.title.bold())

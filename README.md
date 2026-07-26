@@ -240,6 +240,21 @@ or a singleton — the build stops them.
    `ViewStateTests2`–`5` files testing that duplicated shape is the natural result of not
    extracting it once. `ViewState<Value>` exists so this template doesn't repeat that.
 
+   `ViewState<Value>` has a `.refreshing(Value)` case, distinct from `.loading`, for exactly
+   one reason: a re-fetch (search term changed, pull-to-refresh, delete-then-reload) should
+   keep showing the previous list while it completes, not blank the screen to a spinner the
+   way transitioning back to `.loading` would. `HomeViewModel.load()` already does this —
+   `state.value.map(ViewState.refreshing) ?? .loading` — and `HomeSplitView`/`ItemDetailView`
+   render `.loaded`/`.refreshing` identically, showing a toolbar `ProgressView()` only for
+   the latter. **`.refreshing` deliberately doesn't say *why*** (search vs. load-more vs.
+   pull-to-refresh) — `ViewState` only answers "do I have data, is something in flight,"
+   not every possible reason a screen might refetch. If you add search or pagination and the
+   UI needs to distinguish them (e.g. a load-more spinner belongs at the bottom of the list,
+   not the toolbar), add a purpose-specific property to that ViewModel — `isLoadingMore:
+   Bool`, a `searchText: String` whose non-empty state implies "searching" — rather than
+   growing `ViewState` with a `reason` enum every screen would have to handle whether or not
+   it's relevant. Keep the shared type generic; put feature-specific "why" on the feature.
+
 ## Architecture notes
 
 - **`AppError`** (`Domain/AppError.swift`) is the one error vocabulary every layer

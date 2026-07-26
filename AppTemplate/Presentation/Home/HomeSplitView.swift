@@ -3,7 +3,7 @@ import SwiftUI
 /// NavigationSplitView is natively adaptive: a two-column sidebar+detail layout on
 /// iPad/Mac, a single push-style column on iPhone — no manual size-class branching.
 struct HomeSplitView: View {
-    @State private var viewModel: HomeViewModel
+    @Bindable private var viewModel: HomeViewModel
     @Bindable private var coordinator: NavigationCoordinator
     private let makeDetailViewModel: (String) -> ItemDetailViewModel
     private let makeFormViewModel: (ItemFormRoute) -> AddEditItemViewModel
@@ -19,7 +19,7 @@ struct HomeSplitView: View {
         makeDetailViewModel: @escaping (String) -> ItemDetailViewModel,
         makeFormViewModel: @escaping (ItemFormRoute) -> AddEditItemViewModel
     ) {
-        _viewModel = State(initialValue: viewModel)
+        self.viewModel = viewModel
         self.coordinator = coordinator
         self.makeDetailViewModel = makeDetailViewModel
         self.makeFormViewModel = makeFormViewModel
@@ -29,6 +29,10 @@ struct HomeSplitView: View {
         NavigationSplitView {
             sidebar
                 .navigationTitle("Items")
+                .searchable(text: $viewModel.searchText, prompt: "Search items")
+                .onChange(of: viewModel.searchText) { _, _ in
+                    viewModel.searchTextDidChange()
+                }
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -71,22 +75,64 @@ struct HomeSplitView: View {
                 systemImage: "exclamationmark.triangle",
                 description: Text(message)
             )
-        case .loaded(let items):
-            List(items, selection: $coordinator.selectedItemID) { item in
+        case .loaded(let items), .refreshing(let items):
+            // Same list for both — `.refreshing` keeps the previous items on screen while a
+            // new fetch is in flight (search, delete-then-reload) instead of blanking to a
+            // spinner; the toolbar's ProgressView (below) is the only visible difference.
+            if items.isEmpty {
+                emptyState
+            } else {
+                itemList(items)
+            }
+        }
+    }
+
+    /// A search yielding zero results and a genuinely empty list are different situations —
+    /// this is the concrete case the README's "separate flags per ViewModel" guidance is
+    /// about: the *reason* for what's on screen lives on `HomeViewModel` (`searchText`),
+    /// not on `ViewState`, which only knows "loaded, and it's empty."
+    @ViewBuilder
+    private var emptyState: some View {
+        if viewModel.searchText.isEmpty {
+            ContentUnavailableView("No Items", systemImage: "tray")
+        } else {
+            ContentUnavailableView.search(text: viewModel.searchText)
+        }
+    }
+
+    private func itemList(_ items: [Item]) -> some View {
+        List(items, selection: $coordinator.selectedItemID) { item in
+            let isDeleting = viewModel.deletingItemIDs.contains(item.id)
+            HStack {
                 Text(item.title)
-                    .tag(item.id)
-                    .swipeActions {
-                        Button(role: .destructive) {
-                            Task {
-                                await viewModel.delete(id: item.id)
-                                if coordinator.selectedItemID == item.id {
-                                    coordinator.selectItem(nil)
-                                }
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                if isDeleting {
+                    Spacer()
+                    ProgressView()
+                }
+            }
+            .tag(item.id)
+            // Blocks selection (navigating into the detail screen) and re-swiping this row
+            // while its own delete is in flight — the rest of the list stays interactive.
+            .disabled(isDeleting)
+            .swipeActions {
+                Button(role: .destructive) {
+                    Task {
+                        await viewModel.delete(id: item.id)
+                        if coordinator.selectedItemID == item.id {
+                            coordinator.selectItem(nil)
                         }
                     }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(isDeleting)
+            }
+        }
+        .toolbar {
+            if case .refreshing = viewModel.state {
+                ToolbarItem(placement: .status) {
+                    ProgressView()
+                }
             }
         }
     }

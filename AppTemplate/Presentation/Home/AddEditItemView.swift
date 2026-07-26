@@ -24,23 +24,31 @@ struct AddEditItemView: View {
                     Text(message).foregroundStyle(.red)
                 }
             }
+            .disabled(viewModel.isSaving)
             .navigationTitle(viewModel.navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .disabled(viewModel.isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            if let saved = await viewModel.save() {
-                                onSaved(saved)
-                                dismiss()
+                    if viewModel.isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            Task {
+                                if let saved = await viewModel.save() {
+                                    onSaved(saved)
+                                    dismiss()
+                                }
                             }
                         }
                     }
-                    .disabled(viewModel.isSaving)
                 }
             }
         }
+        // Without this, swipe-to-dismiss bypasses the disabled Cancel button above and
+        // closes the sheet while the save is still in flight.
+        .interactiveDismissDisabled(viewModel.isSaving)
     }
 }

@@ -5,12 +5,20 @@ import Foundation
 /// `AppDependencies`, never by branching inside the repository itself.
 final class MockItemRepositoryImpl: ItemRepository {
     private var items: [Item]
+    /// Zero by default (instant, for normal dev use). Tests that need to deterministically
+    /// observe a ViewModel's mid-flight state (e.g. `ViewState.refreshing` before the fetch
+    /// completes) set this instead of racing real task scheduling.
+    private let artificialDelay: Duration
 
-    init(items: [Item] = MockItemRepositoryImpl.sampleItems) {
+    init(items: [Item] = MockItemRepositoryImpl.sampleItems, artificialDelay: Duration = .zero) {
         self.items = items
+        self.artificialDelay = artificialDelay
     }
 
     func fetchItems(search: String?) async throws -> [Item] {
+        if artificialDelay > .zero {
+            try? await Task.sleep(for: artificialDelay)
+        }
         guard let search, !search.isEmpty else { return items }
         return items.filter { $0.title.localizedCaseInsensitiveContains(search) }
     }
@@ -34,6 +42,9 @@ final class MockItemRepositoryImpl: ItemRepository {
     }
 
     func deleteItem(id: String) async throws {
+        if artificialDelay > .zero {
+            try? await Task.sleep(for: artificialDelay)
+        }
         items.removeAll { $0.id == id }
     }
 
