@@ -3,11 +3,6 @@ import Observation
 @Observable
 @MainActor
 final class AddEditItemViewModel {
-    enum Mode: Equatable {
-        case create
-        case edit(Item)
-    }
-
     var title: String
     var detail: String
     var selectedPriorityID: String?
@@ -21,11 +16,11 @@ final class AddEditItemViewModel {
     /// property on a form ViewModel instead of the whole ViewModel.
     private(set) var priorityOptions: ViewState<[Priority]> = .loading
 
-    private let mode: Mode
+    private let mode: FormMode<Item>
     private let repository: ItemRepository
     private let priorityRepository: PriorityRepository
 
-    init(mode: Mode, repository: ItemRepository, priorityRepository: PriorityRepository) {
+    init(mode: FormMode<Item>, repository: ItemRepository, priorityRepository: PriorityRepository) {
         self.mode = mode
         self.repository = repository
         self.priorityRepository = priorityRepository

@@ -100,7 +100,7 @@ final class AppDependencies {
     }
 
     func makeAddEditItemViewModel(route: ItemFormRoute) -> AddEditItemViewModel {
-        let mode: AddEditItemViewModel.Mode
+        let mode: FormMode<Item>
         switch route {
         case .create: mode = .create
         case .edit(let item): mode = .edit(item)

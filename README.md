@@ -59,6 +59,7 @@ AppTemplate/
 │   ├── Presentation/              # ViewModel + View per feature — depends only on Domain
 │   │   │                          # protocols, never a concrete Data type
 │   │   ├── ViewState.swift             # shared loading/loaded/refreshing/failed generic
+│   │   ├── FormMode.swift               # shared create/edit(Value) generic
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -136,9 +137,11 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    Validation errors and save/load failures both surface through `AppError`. If the
    ViewModel's job is "fetch a resource, show it," declare `state: ViewState<Value>`
    (`Presentation/ViewState.swift`) — don't declare a new `enum State { case loading,
-   loaded, failed }` per screen (see "Shared `ViewState`" below for why). A form/submission
-   ViewModel (validation + save-in-flight, like `AddEditItemViewModel`) is a different
-   shape and keeps its own properties instead.
+   loaded, failed }` per screen (see "Shared `ViewState`" below for why). If it's instead
+   "create a new X or edit an existing one," declare `mode: FormMode<Value>`
+   (`Presentation/FormMode.swift`, e.g. `AddEditItemViewModel`'s `FormMode<Item>`) rather
+   than its own `enum Mode { case create; case edit(X) }` — same reasoning as `ViewState`,
+   applied to the other recurring ViewModel shape this template has.
 4. **AppDependencies**: one stored `let` + one `make*ViewModel()` factory method.
 5. **Navigation**: if it needs a push destination, add a case to `AppRoute` and a branch
    in the relevant `.navigationDestination(for:)`. For a modal form, follow

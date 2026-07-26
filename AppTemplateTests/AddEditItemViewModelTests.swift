@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct AddEditItemViewModelTests {
     private func makeViewModel(
-        mode: AddEditItemViewModel.Mode,
+        mode: FormMode<Item>,
         repository: ItemRepository = MockItemRepositoryImpl(),
         priorityRepository: PriorityRepository = MockPriorityRepositoryImpl()
     ) -> AddEditItemViewModel {
