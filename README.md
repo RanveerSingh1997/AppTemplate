@@ -73,7 +73,12 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    mapping DTO <-> persistence entity, and two repository implementations (live, mock).
 3. **Presentation**: `@Observable @MainActor` ViewModel + `View`, taking the ViewModel
    in its initializer (never constructing it itself — that's `AppDependencies`' job).
-   Validation errors and save/load failures both surface through `AppError`.
+   Validation errors and save/load failures both surface through `AppError`. If the
+   ViewModel's job is "fetch a resource, show it," declare `state: ViewState<Value>`
+   (`Presentation/ViewState.swift`) — don't declare a new `enum State { case loading,
+   loaded, failed }` per screen (see "Shared `ViewState`" below for why). A form/submission
+   ViewModel (validation + save-in-flight, like `AddEditItemViewModel`) is a different
+   shape and keeps its own properties instead.
 4. **AppDependencies**: one stored `let` + one `make*ViewModel()` factory method.
 5. **Navigation**: if it needs a push destination, add a case to `AppRoute` and a branch
    in the relevant `.navigationDestination(for:)`. For a modal form, follow
@@ -218,6 +223,22 @@ or a singleton — the build stops them.
    `Domain`'s protocols. `Presentation/` depends only on `Domain` protocols, never on
    concrete `Data` types (this is rule 1, restated as the general principle it's an
    instance of).
+5. **A "fetch and show" ViewModel declares `ViewState<Value>`, never its own state enum.**
+   `HomeViewModel` and `ItemDetailViewModel` both declare `state: ViewState<[Item]>`/
+   `ViewState<Item>` from the one shared type in `Presentation/ViewState.swift`, instead of
+   each writing its own `enum State { case loading, loaded, failed }`. Not mechanically
+   enforced the way rules 1–2 are (no SwiftLint check for "did you reuse the shared type"),
+   but it's the one existing example both current ViewModels already follow — copy it.
+
+   This is deliberately the *opposite* of Iris's actual pattern: Iris has ~18 separate
+   `XViewState`/`XViewStates` files (one per screen — `SplashViewStates`,
+   `LoginViewStates`, `AccountsListingViewStates`, ...), each hand-writing a near-identical
+   loading/loaded/error shape, several with manually-written `Equatable` conformances that
+   Swift could have synthesized, and one with a doc comment copy-pasted from a *different*
+   screen's state file that was never updated ("Represents the possible states of the
+   login process" — on `SplashViewStates.swift`). Five separate `ViewStateTests`/
+   `ViewStateTests2`–`5` files testing that duplicated shape is the natural result of not
+   extracting it once. `ViewState<Value>` exists so this template doesn't repeat that.
 
 ## Architecture notes
 

@@ -3,13 +3,7 @@ import Observation
 @Observable
 @MainActor
 final class ItemDetailViewModel {
-    enum State {
-        case loading
-        case loaded(Item)
-        case failed(String)
-    }
-
-    private(set) var state: State = .loading
+    private(set) var state: ViewState<Item> = .loading
     private let itemID: String
     private let repository: ItemRepository
 
