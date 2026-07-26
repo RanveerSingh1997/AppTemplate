@@ -20,6 +20,7 @@ final class AppDependencies {
     let logger: EventLogger
 
     private let itemRepository: ItemRepository
+    private let priorityRepository: PriorityRepository
 
     // A hardcoded, compile-time-valid URL, only ever reached if AppConfiguration.apiBaseURL()
     // itself fails — i.e. a broken xcconfig, not a runtime condition to design around.
@@ -35,6 +36,7 @@ final class AppDependencies {
         case .dev:
             // No backend/Keychain friction needed to run the template out of the box.
             itemRepository = MockItemRepositoryImpl()
+            priorityRepository = MockPriorityRepositoryImpl()
             secureStorageService = InMemorySecureStorageService()
             reachabilityService = MockReachabilityService()
             logger = ConsoleEventLogger()
@@ -56,22 +58,25 @@ final class AppDependencies {
                 return token
             }
 
-            itemRepository = ItemRepositoryImpl(
-                apiClient: URLSessionAPIClient(
-                    baseURL: baseURL,
-                    interceptors: [
-                        CorrelationIDInterceptor(),
-                        authInterceptor,
-                        LoggingInterceptor(logger: consoleLogger)
-                    ],
-                    // No auth flow yet, so no refresh action exists to call on a 401 —
-                    // add one (e.g. calling an AuthRepository's refresh) once you have one.
-                    authTokenRefresher: nil
-                    // retryPolicy: .default (GET retried twice on 5xx/timeout)
-                    // pinnedPublicKeyHashes: [] (see PinnedCertificateValidator to enable)
-                ),
-                modelContext: container.mainContext
+            // Shared by every repository below — one client, one set of interceptors,
+            // instead of a fresh URLSessionAPIClient (and its own interceptor stack) per
+            // repository.
+            let apiClient = URLSessionAPIClient(
+                baseURL: baseURL,
+                interceptors: [
+                    CorrelationIDInterceptor(),
+                    authInterceptor,
+                    LoggingInterceptor(logger: consoleLogger)
+                ],
+                // No auth flow yet, so no refresh action exists to call on a 401 —
+                // add one (e.g. calling an AuthRepository's refresh) once you have one.
+                authTokenRefresher: nil
+                // retryPolicy: .default (GET retried twice on 5xx/timeout)
+                // pinnedPublicKeyHashes: [] (see PinnedCertificateValidator to enable)
             )
+
+            itemRepository = ItemRepositoryImpl(apiClient: apiClient, modelContext: container.mainContext)
+            priorityRepository = PriorityRepositoryImpl(apiClient: apiClient)
             reachabilityService = ReachabilityServiceImpl()
         }
     }
@@ -100,6 +105,6 @@ final class AppDependencies {
         case .create: mode = .create
         case .edit(let item): mode = .edit(item)
         }
-        return AddEditItemViewModel(mode: mode, repository: itemRepository)
+        return AddEditItemViewModel(mode: mode, repository: itemRepository, priorityRepository: priorityRepository)
     }
 }

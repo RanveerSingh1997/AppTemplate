@@ -7,4 +7,7 @@ struct Item: Identifiable, Hashable, Sendable {
     let id: String
     var title: String
     var detail: String
+    /// References a `Priority` fetched independently (see `PriorityRepository`) — the
+    /// concrete example of composing more than one fetched data source on one screen.
+    var priorityID: String?
 }

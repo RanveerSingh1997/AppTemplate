@@ -8,13 +8,15 @@ final class CachedItem {
     @Attribute(.unique) var id: String
     var title: String
     var detail: String
+    var priorityID: String?
     var localInsertedAt: Date
     var localUpdatedAt: Date
 
-    init(id: String, title: String, detail: String) {
+    init(id: String, title: String, detail: String, priorityID: String? = nil) {
         self.id = id
         self.title = title
         self.detail = detail
+        self.priorityID = priorityID
         localInsertedAt = .now
         localUpdatedAt = .now
     }
@@ -23,5 +25,5 @@ final class CachedItem {
 extension CachedItem: LocalTimestamped {}
 
 extension CachedItem {
-    var asDomain: Item { Item(id: id, title: title, detail: detail) }
+    var asDomain: Item { Item(id: id, title: title, detail: detail, priorityID: priorityID) }
 }

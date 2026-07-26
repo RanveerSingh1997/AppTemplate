@@ -7,4 +7,5 @@ struct ItemDTO: Codable, Sendable {
     let id: String
     var name: String
     var description: String
+    var priorityID: String?
 }

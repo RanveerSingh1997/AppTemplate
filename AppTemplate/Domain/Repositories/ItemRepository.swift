@@ -8,7 +8,7 @@ protocol ItemRepository {
     /// (and used to filter the cache-fallback path) — see `ItemRepositoryImpl`.
     func fetchItems(search: String?) async throws -> [Item]
     func fetchItem(id: String) async throws -> Item?
-    func createItem(title: String, detail: String) async throws -> Item
+    func createItem(title: String, detail: String, priorityID: String?) async throws -> Item
     func updateItem(_ item: Item) async throws -> Item
     func deleteItem(id: String) async throws
 }
@@ -18,5 +18,10 @@ extension ItemRepository {
     /// `search: nil` at every use.
     func fetchItems() async throws -> [Item] {
         try await fetchItems(search: nil)
+    }
+
+    /// Convenience for callers that don't need to set a priority.
+    func createItem(title: String, detail: String) async throws -> Item {
+        try await createItem(title: title, detail: detail, priorityID: nil)
     }
 }

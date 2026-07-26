@@ -33,10 +33,10 @@ final class ItemRepositoryImpl: ItemRepository {
         try await fetchItems().first { $0.id == id }
     }
 
-    func createItem(title: String, detail: String) async throws -> Item {
+    func createItem(title: String, detail: String, priorityID: String?) async throws -> Item {
         // The server assigns the real id and returns it in the response; the outgoing
         // `id` is a placeholder the server is expected to ignore.
-        let payload = ItemDTO(id: "", name: title, description: detail)
+        let payload = ItemDTO(id: "", name: title, description: detail, priorityID: priorityID)
         let created: ItemDTO = try await apiClient.send(
             APIRequest(endpoint: .createItem, json: payload)
         )

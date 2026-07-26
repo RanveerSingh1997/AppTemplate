@@ -255,6 +255,40 @@ or a singleton — the build stops them.
    growing `ViewState` with a `reason` enum every screen would have to handle whether or not
    it's relevant. Keep the shared type generic; put feature-specific "why" on the feature.
 
+## Consuming multiple fetched data sources on one screen
+
+`ViewState<Value>` isn't "the one state of the screen" — `Value` is scoped to *one fetch*.
+A screen that needs several independently-fetched things doesn't outgrow it; it just
+declares one `ViewState<X>` property per thing. `AddEditItemViewModel` is the concrete
+example, not a hypothetical one:
+
+```swift
+var title: String                                  // the form's own fields —
+var detail: String                                  // not fetched, not ViewState
+private(set) var priorityOptions: ViewState<[Priority]> = .loading   // fetched independently
+```
+
+`loadPriorities()` and the form's own `save()`/validation run on separate schedules —
+`AddEditItemView` calls `.task { await viewModel.loadPriorities() }` alongside the form
+fields, so the priority picker loads concurrently with (not blocking, and not blocked by)
+the rest of the sheet appearing. Add a third fetched thing (categories, assignees,
+whatever) the same way: one more `ViewState<Y>` property, one more `.task`.
+
+**When to reach for a composite `Value` instead**: if two or more fetches must always
+load/fail/refresh *together* — there's no sensible way to show the screen with only one
+of them loaded — bundle them into one struct and fetch that as a unit instead of
+juggling N independent `ViewState` properties:
+
+```swift
+struct HomeScreenData { let items: [Item]; let priorities: [Priority] }
+private(set) var state: ViewState<HomeScreenData> = .loading
+// load() does `async let items = ...; async let priorities = ...` and combines them
+// into one HomeScreenData before setting `.loaded(...)`.
+```
+
+Neither approach requires changing `ViewState` itself — it stays exactly as generic as
+`Presentation/ViewState.swift` already defines it either way.
+
 ## Architecture notes
 
 - **`AppError`** (`Domain/AppError.swift`) is the one error vocabulary every layer

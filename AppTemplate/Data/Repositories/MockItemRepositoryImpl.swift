@@ -27,8 +27,8 @@ final class MockItemRepositoryImpl: ItemRepository {
         items.first { $0.id == id }
     }
 
-    func createItem(title: String, detail: String) async throws -> Item {
-        let item = Item(id: UUID().uuidString, title: title, detail: detail)
+    func createItem(title: String, detail: String, priorityID: String?) async throws -> Item {
+        let item = Item(id: UUID().uuidString, title: title, detail: detail, priorityID: priorityID)
         items.append(item)
         return item
     }
