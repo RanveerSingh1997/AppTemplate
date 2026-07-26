@@ -15,7 +15,7 @@ enum AppError: Error, LocalizedError, Equatable {
         case invalidURL
         case noConnection
         case invalidResponse
-        case requestFailed(statusCode: Int)
+        case requestFailed(statusCode: Int, message: String?)
         case decodingFailed
     }
 
@@ -38,8 +38,8 @@ enum AppError: Error, LocalizedError, Equatable {
             return "No internet connection."
         case .network(.invalidResponse):
             return "The server returned an unexpected response."
-        case .network(.requestFailed(let statusCode)):
-            return "The request failed (status \(statusCode))."
+        case .network(.requestFailed(let statusCode, let message)):
+            return message ?? "The request failed (status \(statusCode))."
         case .network(.decodingFailed):
             return "Couldn't read the server's response."
         case .persistence(.saveFailed):

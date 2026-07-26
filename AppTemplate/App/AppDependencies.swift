@@ -42,28 +42,33 @@ final class AppDependencies {
             let baseURL = (try? AppConfiguration.apiBaseURL()) ?? AppDependencies.fallbackBaseURL
             let secureStorage = KeychainSecureStorageService()
             secureStorageService = secureStorage
+            let consoleLogger = ConsoleEventLogger()
+            logger = consoleLogger
 
             // Reads whatever an auth feature has stored under `.authTokenKey` and attaches
             // it as `Authorization: Bearer <token>` to every request. Before login this
             // just returns nil, so requests go out unauthenticated — nothing to wire up
             // differently once auth exists, since this reads live on every request.
             let authInterceptor = AuthHeaderInterceptor {
-                guard case .success(let token) = secureStorage.get(forKey: SecureStorageKey.authToken) else { return nil }
+                guard case .success(let token) = secureStorage.get(forKey: SecureStorageKey.authToken) else {
+                    return nil
+                }
                 return token
             }
 
             itemRepository = ItemRepositoryImpl(
                 apiClient: URLSessionAPIClient(
                     baseURL: baseURL,
-                    interceptors: [authInterceptor],
+                    interceptors: [authInterceptor, LoggingInterceptor(logger: consoleLogger)],
                     // No auth flow yet, so no refresh action exists to call on a 401 —
                     // add one (e.g. calling an AuthRepository's refresh) once you have one.
                     authTokenRefresher: nil
+                    // retryPolicy: .default (GET retried twice on 5xx/timeout)
+                    // pinnedPublicKeyHashes: [] (see PinnedCertificateValidator to enable)
                 ),
                 modelContext: container.mainContext
             )
             reachabilityService = ReachabilityServiceImpl()
-            logger = ConsoleEventLogger()
         }
     }
 

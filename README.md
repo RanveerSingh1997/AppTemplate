@@ -88,7 +88,8 @@ because most real apps need them soon — but nothing in the app calls them yet.
 `ItemRepositoryImpl`) when a concrete feature needs it; don't reach for `.shared` instead.
 
 - **`SecureStorageService`** (`Domain/Services/SecureStorageService.swift`) — Keychain-
-  backed token/credential storage. Plug in when you add auth.
+  backed token/credential storage. Already read by `AuthHeaderInterceptor` (see below);
+  an auth feature just needs to *write* to it after login — nothing else to wire up.
 - **`ReachabilityService`** (`Domain/Services/ReachabilityService.swift`) — connectivity
   check via `NWPathMonitor`. Plug into a repository (check before a network call) or an
   offline banner.
@@ -105,11 +106,10 @@ on them.
 - **Localization** — plain string literals for now. Add a String Catalog
   (`Localizable.xcstrings`) when you actually need a second language.
 - **Auth/login flow** — business-specific; bolt it on as its own feature module
-  following the same Domain/Data/Presentation shape, using `SecureStorageService` above.
-- **Auth headers, retry, or request logging on `APIClient`** — it already covers every
-  HTTP verb via one `send(_ request: APIRequest)` method, so add these as a decorator
-  wrapping `URLSessionAPIClient` (or a second `APIClientInterceptor`-style hook) rather
-  than new protocol methods or a bigger single type.
+  following the same Domain/Data/Presentation shape. Once it exists, have it call
+  `secureStorageService.set(_:forKey: SecureStorageKey.authToken)` after login/refresh —
+  `URLSessionAPIClient` already reads that key on every request (see below), so nothing
+  in the networking layer needs to change.
 
 ## Fixes vs. the app this was templated from
 
@@ -130,6 +130,56 @@ on them.
 - **Environment is a first-class config, not `#if DEBUG`.** QA can be built Debug or
   Release, so `AppEnvironment` reads an `ENVName` Info.plist key set per-scheme, instead
   of conflating "which backend" with "which build type."
+
+## Networking (`Data/Networking/`)
+
+`URLSessionAPIClient` is meant to be the last time you touch the transport layer, not a
+starting sketch. Every piece below is a real, tested implementation, not a stub:
+
+- **Auth header injection**: `AuthHeaderInterceptor` reads `SecureStorageKey.authToken`
+  from `SecureStorageService` on every request and sets `Authorization: Bearer <token>`.
+  Wired into `AppDependencies`' QA/Prod `URLSessionAPIClient` already — an auth feature
+  only needs to `set(_:forKey:)` that key after login; the interceptor picks it up live,
+  no other change needed. Before login it reads `nil` and leaves requests alone.
+- **Interceptor chain**: `APIClientInterceptor` is the general seam (`adapt(_:)` to modify
+  outgoing requests, `didReceive(response:data:for:duration:)` to observe every response)
+  for anything else per-request — request signing, a correlation ID. `LoggingInterceptor`
+  is a second concrete conformance, wired in alongside the auth one, logging method/path/
+  status/duration through `EventLogger` (never headers/body, so it's safe to leave on).
+- **401 -> refresh -> retry**: pass `authTokenRefresher` to `URLSessionAPIClient` once you
+  have a token-refresh call. On a 401 it's invoked once; on success the original request
+  is retried (picking up whatever the interceptors now read); on failure the refresh's
+  error propagates. `nil` today because there's no auth flow yet to refresh from.
+- **Transient-failure retry**: `RetryPolicy` retries 5xx/timeout responses with a linear
+  backoff — `.get` only by default (`.default`), since auto-retrying `.post`/`.put`/
+  `.delete` risks double-submitting a request whose response was merely lost. Opt other
+  verbs in per-client if you know a given endpoint is idempotent. Separate from, and
+  composes with, the 401-retry above.
+- **Real server error messages**: a non-2xx response has its body decoded as
+  `APIErrorResponse` (tries `message`/`error`/`errorMessage`/`detail` keys — adjust to your
+  API's actual shape) and that message surfaces through `AppError`, instead of a generic
+  "status 422" with no explanation of what was actually wrong.
+- **Timeouts**: `URLSessionAPIClient.makeSession(requestTimeout:resourceTimeout:)` sets
+  explicit timeouts (30s/60s defaults) instead of relying on `URLSession.shared`'s.
+- **Certificate pinning**: `PinnedCertificateValidator` pins by server public-key SHA-256
+  hash. Disabled by default (a template can't ship real hashes for a real backend) — pass
+  `pinnedPublicKeyHashes` to `URLSessionAPIClient.init`/`makeSession` to enable; both the
+  main session and the separate upload session (see below) enforce the same pins.
+- **File upload with progress**: `upload(_:file:)` returns `AsyncStream<UploadEvent>`
+  (`.progress(Double)`, `.completed(Data)`, `.failed(AppError)`) via a real multipart
+  implementation (`MultipartFormData`, `UploadProgressObserver`) — the one case with a
+  second `APIClient` method, since progress-over-time can't fit `send`'s single-value shape.
+- **Query parameters & JSON bodies as data, not string concatenation**: `APIRequest.queryItems`
+  (`[URLQueryItem]`) and the `APIRequest(path:method:json:)` initializer (auto-encodes
+  `Encodable`, sets `Content-Type: application/json`) replace hand-built query strings and
+  the per-call-site `JSONEncoder().encode(...)` boilerplate `ItemRepositoryImpl` used to have.
+- **Every HTTP verb, one `send` method**: `APIRequest.method` + `.requiresAuth` cover
+  GET/POST/PUT/DELETE and public-vs-authenticated endpoints without new protocol methods.
+
+Tested directly (not just through the mock repository) in
+`AppTemplateTests/URLSessionAPIClientTests.swift`, which stubs `URLProtocol` to exercise
+the auth header, error-message decoding, and retry-policy logic against real (intercepted)
+HTTP round-trips.
 
 ## Architecture notes
 

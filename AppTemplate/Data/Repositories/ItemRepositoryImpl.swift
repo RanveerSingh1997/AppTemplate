@@ -37,7 +37,7 @@ final class ItemRepositoryImpl: ItemRepository {
         // `id` is a placeholder the server is expected to ignore.
         let payload = ItemDTO(id: "", name: title, description: detail)
         let created: ItemDTO = try await apiClient.send(
-            APIRequest(path: "items", method: .post, body: try encode(payload))
+            APIRequest(path: "items", method: .post, json: payload)
         )
         _ = mapper.toEntity(dto: created, context: modelContext)
         return created.asDomain
@@ -45,7 +45,7 @@ final class ItemRepositoryImpl: ItemRepository {
 
     func updateItem(_ item: Item) async throws -> Item {
         let updated: ItemDTO = try await apiClient.send(
-            APIRequest(path: "items/\(item.id)", method: .put, body: try encode(item.asDTO))
+            APIRequest(path: "items/\(item.id)", method: .put, json: item.asDTO)
         )
         if let existing = try? modelContext.fetch(FetchDescriptor<CachedItem>())
             .first(where: { $0.id == updated.id }) {
@@ -60,14 +60,6 @@ final class ItemRepositoryImpl: ItemRepository {
         let _: EmptyResponse = try await apiClient.send(APIRequest(path: "items/\(id)", method: .delete))
         if let existing = try? modelContext.fetch(FetchDescriptor<CachedItem>()).first(where: { $0.id == id }) {
             modelContext.delete(existing)
-        }
-    }
-
-    private func encode(_ dto: ItemDTO) throws -> Data {
-        do {
-            return try JSONEncoder().encode(dto)
-        } catch {
-            throw AppError.unknown("Could not encode request body.")
         }
     }
 
