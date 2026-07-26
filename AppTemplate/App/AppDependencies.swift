@@ -88,7 +88,7 @@ final class AppDependencies {
     }
 
     func makeHomeViewModel() -> HomeViewModel {
-        HomeViewModel(repository: itemRepository)
+        HomeViewModel(repository: itemRepository, priorityRepository: priorityRepository)
     }
 
     func makeItemDetailViewModel(itemID: String) -> ItemDetailViewModel {

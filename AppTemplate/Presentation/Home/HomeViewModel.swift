@@ -4,7 +4,7 @@ import Observation
 @Observable
 @MainActor
 final class HomeViewModel {
-    private(set) var state: ViewState<[Item]> = .loading
+    private(set) var state: ViewState<HomeScreenData> = .loading
 
     /// Bound to `.searchable(text:)`. Debounced via `searchTextDidChange()` — the View calls
     /// that on every keystroke; this property itself is just the current text.
@@ -17,10 +17,12 @@ final class HomeViewModel {
     private(set) var deletingItemIDs: Set<String> = []
 
     private let repository: ItemRepository
+    private let priorityRepository: PriorityRepository
     private var searchDebounceTask: Task<Void, Never>?
 
-    init(repository: ItemRepository) {
+    init(repository: ItemRepository, priorityRepository: PriorityRepository) {
         self.repository = repository
+        self.priorityRepository = priorityRepository
     }
 
     func load() async {
@@ -30,7 +32,15 @@ final class HomeViewModel {
         state = state.value.map(ViewState.refreshing) ?? .loading
         do {
             let search = searchText.isEmpty ? nil : searchText
-            state = .loaded(try await repository.fetchItems(search: search))
+            // Both fetches start concurrently; `async let` cancels whichever hasn't
+            // finished if the other throws, so no orphaned request on failure.
+            // ponytail: re-fetches priorities on every reload, including every debounced
+            // search, even though priority lookup data rarely changes. Fine while it's
+            // cheap; cache it separately (fetch once, reuse across reloads) if that
+            // ever measurably matters.
+            async let items = repository.fetchItems(search: search)
+            async let priorities = priorityRepository.fetchPriorities()
+            state = .loaded(HomeScreenData(items: try await items, priorities: try await priorities))
         } catch let error as AppError {
             state = .failed(error.errorDescription ?? "Something went wrong.")
         } catch {

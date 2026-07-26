@@ -75,14 +75,14 @@ struct HomeSplitView: View {
                 systemImage: "exclamationmark.triangle",
                 description: Text(message)
             )
-        case .loaded(let items), .refreshing(let items):
+        case .loaded(let data), .refreshing(let data):
             // Same list for both — `.refreshing` keeps the previous items on screen while a
             // new fetch is in flight (search, delete-then-reload) instead of blanking to a
             // spinner; the toolbar's ProgressView (below) is the only visible difference.
-            if items.isEmpty {
+            if data.items.isEmpty {
                 emptyState
             } else {
-                itemList(items)
+                itemList(data)
             }
         }
     }
@@ -100,11 +100,18 @@ struct HomeSplitView: View {
         }
     }
 
-    private func itemList(_ items: [Item]) -> some View {
-        List(items, selection: $coordinator.selectedItemID) { item in
+    private func itemList(_ data: HomeScreenData) -> some View {
+        List(data.items, selection: $coordinator.selectedItemID) { item in
             let isDeleting = viewModel.deletingItemIDs.contains(item.id)
             HStack {
-                Text(item.title)
+                VStack(alignment: .leading) {
+                    Text(item.title)
+                    if let priorityName = data.priorityName(for: item) {
+                        Text(priorityName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if isDeleting {
                     Spacer()
                     ProgressView()

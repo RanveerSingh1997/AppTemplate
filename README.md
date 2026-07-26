@@ -277,14 +277,34 @@ whatever) the same way: one more `ViewState<Y>` property, one more `.task`.
 **When to reach for a composite `Value` instead**: if two or more fetches must always
 load/fail/refresh *together* — there's no sensible way to show the screen with only one
 of them loaded — bundle them into one struct and fetch that as a unit instead of
-juggling N independent `ViewState` properties:
+juggling N independent `ViewState` properties. `HomeViewModel`/`HomeScreenData` are the
+concrete example: showing an item's priority *label* (not just its raw `priorityID`) needs
+both the item list and the priority lookup resolved before the list is meaningful.
 
 ```swift
-struct HomeScreenData { let items: [Item]; let priorities: [Priority] }
+// Presentation/Home/HomeScreenData.swift
+struct HomeScreenData {
+    let items: [Item]
+    let priorities: [Priority]
+    func priorityName(for item: Item) -> String? { /* looks up item.priorityID */ }
+}
+
+// HomeViewModel
 private(set) var state: ViewState<HomeScreenData> = .loading
-// load() does `async let items = ...; async let priorities = ...` and combines them
-// into one HomeScreenData before setting `.loaded(...)`.
+
+func load() async {
+    state = state.value.map(ViewState.refreshing) ?? .loading
+    async let items = repository.fetchItems(search: search)
+    async let priorities = priorityRepository.fetchPriorities()
+    state = .loaded(HomeScreenData(items: try await items, priorities: try await priorities))
+}
 ```
+
+`async let` starts both fetches concurrently and cancels whichever hasn't finished if the
+other throws — no orphaned request on failure. `HomeSplitView` reads `data.priorityName(for:)`
+to show each row's priority as a subtitle. (One deliberate simplification: `load()` re-fetches
+priorities on every reload, including every debounced search — fine while that's cheap
+lookup data; cache it separately if that ever measurably matters.)
 
 Neither approach requires changing `ViewState` itself — it stays exactly as generic as
 `Presentation/ViewState.swift` already defines it either way.
