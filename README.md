@@ -14,6 +14,66 @@ complete example feature with full CRUD (list, detail, create, edit, delete, val
 backed by `Item`) wired through every layer, plus a Settings tab, so you can see the whole
 pattern working before you copy it.
 
+## Folder structure
+
+```
+AppTemplate/
+├── project.yml                  # xcodegen spec — the source of truth; .xcodeproj is generated
+├── .swiftlint.yml                # includes the two enforced architecture rules (custom_rules)
+│
+├── AppTemplate/
+│   ├── App/                     # composition root + app shell — the only layer allowed to
+│   │   │                        # know about concrete Data types (see Architecture rules)
+│   │   ├── TemplateApp.swift          # @main
+│   │   ├── AppContainerView.swift     # splash -> main tab switch, startup-error alert
+│   │   └── AppDependencies.swift      # builds every dependency once, exposes make*ViewModel()
+│   │
+│   ├── Config/                  # per-environment xcconfig (Dev/QA/Prod) — bundle id, app
+│   │   │                        # name, API base URL; read via AppConfiguration
+│   │   ├── DevConfig.xcconfig
+│   │   ├── QAConfig.xcconfig
+│   │   └── ProdConfig.xcconfig
+│   │
+│   ├── Core/                    # infrastructure that isn't Domain/Data/Presentation
+│   │   ├── Config/                    # AppEnvironment, AppConfiguration (reads xcconfig values)
+│   │   ├── Coordinator/                # NavigationCoordinator, AppRoute, ItemFormRoute
+│   │   └── Services/
+│   │       ├── Impl/                   # real implementations (Keychain, NWPathMonitor, console)
+│   │       └── Mocks/                   # in-memory/no-op stand-ins used in Dev
+│   │
+│   ├── Domain/                  # protocols + models only — imports just Foundation, no
+│   │   │                        # SwiftData/URLSession/SwiftUI (see Architecture rules #4)
+│   │   ├── AppError.swift              # the one error vocabulary every layer throws
+│   │   ├── Models/                      # Item, Priority — domain-facing shapes
+│   │   ├── Protocols/                   # EntityMapper, LocalTimestamped
+│   │   ├── Repositories/                 # ItemRepository, PriorityRepository (protocols)
+│   │   └── Services/                     # SecureStorageService, ReachabilityService, EventLogger
+│   │
+│   ├── Data/                     # concrete implementations of Domain's protocols
+│   │   ├── DTOs/                        # ItemDTO, PriorityDTO — network shapes
+│   │   ├── Mappers/                      # ItemMapper — the one place that knows DTO + persistence shape
+│   │   ├── Networking/                   # APIClient, APIEndpoint, interceptors, retry, pinning, upload
+│   │   ├── Persistence/                   # CachedItem (SwiftData), PersistenceFactory
+│   │   └── Repositories/                   # ItemRepositoryImpl/Mock, PriorityRepositoryImpl/Mock
+│   │
+│   ├── Presentation/              # ViewModel + View per feature — depends only on Domain
+│   │   │                          # protocols, never a concrete Data type
+│   │   ├── ViewState.swift             # shared loading/loaded/refreshing/failed generic
+│   │   ├── Splash/
+│   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
+│   │   │                                # example feature; HomeScreenData is the composite-
+│   │   │                                # Value example, AddEditItemViewModel.priorityOptions
+│   │   │                                # is the separate-ViewState-property example
+│   │   ├── Settings/
+│   │   └── Main/                         # MainTabView
+│   │
+│   └── Resources/
+│       └── Assets.xcassets
+│
+└── AppTemplateTests/              # one test file per production file it covers — see
+                                    # "Architecture rules" for what's tested vs. deliberately not
+```
+
 ## Requirements
 
 - Xcode 16+, iOS 17+ deployment target
