@@ -56,4 +56,13 @@ enum AppError: Error, LocalizedError, Equatable {
             return message
         }
     }
+
+    /// Coerces any thrown error into an `AppError` — itself unchanged if it already is
+    /// one, wrapped as `.unknown(message)` otherwise. For call sites that need to *store*
+    /// the error (e.g. `AddEditItemViewModel.saveError: AppError?`), not just display a
+    /// string — for display, `error.localizedDescription` already bridges through
+    /// `errorDescription` via `LocalizedError`, so no helper is needed there.
+    static func from(_ error: Error) -> AppError {
+        (error as? AppError) ?? .unknown(error.localizedDescription)
+    }
 }

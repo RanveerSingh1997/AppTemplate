@@ -60,6 +60,7 @@ AppTemplate/
 │   │   │                          # protocols, never a concrete Data type
 │   │   ├── ViewState.swift             # shared loading/loaded/refreshing/failed generic
 │   │   ├── FormMode.swift               # shared create/edit(Value) generic
+│   │   ├── LoadFailureView.swift          # shared ViewState.failed rendering
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-

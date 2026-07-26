@@ -41,9 +41,10 @@ final class HomeViewModel {
             async let items = repository.fetchItems(search: search)
             async let priorities = priorityRepository.fetchPriorities()
             state = .loaded(HomeScreenData(items: try await items, priorities: try await priorities))
-        } catch let error as AppError {
-            state = .failed(error.errorDescription ?? "Something went wrong.")
         } catch {
+            // `error.localizedDescription` already surfaces `AppError.errorDescription`
+            // (via `LocalizedError` bridging) for our own errors, and a reasonable system
+            // message for anything else — no `as AppError` branch needed to get that.
             state = .failed(error.localizedDescription)
         }
     }
@@ -68,9 +69,10 @@ final class HomeViewModel {
         do {
             try await repository.deleteItem(id: id)
             await load()
-        } catch let error as AppError {
-            state = .failed(error.errorDescription ?? "Something went wrong.")
         } catch {
+            // `error.localizedDescription` already surfaces `AppError.errorDescription`
+            // (via `LocalizedError` bridging) for our own errors, and a reasonable system
+            // message for anything else — no `as AppError` branch needed to get that.
             state = .failed(error.localizedDescription)
         }
     }

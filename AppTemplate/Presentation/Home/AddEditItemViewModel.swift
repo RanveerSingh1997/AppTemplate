@@ -47,8 +47,6 @@ final class AddEditItemViewModel {
         priorityOptions = priorityOptions.value.map(ViewState.refreshing) ?? .loading
         do {
             priorityOptions = .loaded(try await priorityRepository.fetchPriorities())
-        } catch let error as AppError {
-            priorityOptions = .failed(error.errorDescription ?? "Couldn't load priorities.")
         } catch {
             priorityOptions = .failed(error.localizedDescription)
         }
@@ -83,11 +81,8 @@ final class AddEditItemViewModel {
                     Item(id: item.id, title: trimmedTitle, detail: detail, priorityID: selectedPriorityID)
                 )
             }
-        } catch let error as AppError {
-            saveError = error
-            return nil
         } catch {
-            saveError = .unknown(error.localizedDescription)
+            saveError = .from(error)
             return nil
         }
     }

@@ -15,11 +15,7 @@ struct ItemDetailView: View {
             case .loading:
                 ProgressView()
             case .failed(let message):
-                ContentUnavailableView(
-                    "Couldn't Load Item",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(message)
-                )
+                LoadFailureView(title: "Couldn't Load Item", message: message)
             case .loaded(let item), .refreshing(let item):
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {

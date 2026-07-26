@@ -70,11 +70,7 @@ struct HomeSplitView: View {
         case .loading:
             ProgressView()
         case .failed(let message):
-            ContentUnavailableView(
-                "Couldn't Load Items",
-                systemImage: "exclamationmark.triangle",
-                description: Text(message)
-            )
+            LoadFailureView(title: "Couldn't Load Items", message: message)
         case .loaded(let data), .refreshing(let data):
             // Same list for both — `.refreshing` keeps the previous items on screen while a
             // new fetch is in flight (search, delete-then-reload) instead of blanking to a
