@@ -6,10 +6,8 @@
 
 A starting-point SwiftUI iOS app: Clean Architecture (Core / Domain / Data / Presentation),
 a Coordinator for navigation, one small DI container, a repository pattern with mock/live
-swapping, and a DTO -> Domain -> Persistence mapping layer. It's a rebuilt version of the
-pattern used in the Iris app — the good parts kept, several known rough edges fixed (see
-below), and a few things made *more* rigorous than the original (unified error taxonomy,
-per-environment build configs, SwiftLint enforced from day one).
+swapping, and a DTO -> Domain -> Persistence mapping layer, with a unified error taxonomy,
+per-environment build configs, and SwiftLint enforced from day one.
 
 Builds and runs immediately in the simulator — no backend, no config needed. It ships one
 complete example feature with full CRUD (list, detail, create, edit, delete, validation —
@@ -60,11 +58,12 @@ AppTemplate/
 │   │
 │   ├── Presentation/              # ViewModel + View per feature — depends only on Domain
 │   │   │                          # protocols, never a concrete Data type
-│   │   ├── ViewState.swift             # shared loading/loaded/refreshing/failed generic
-│   │   ├── FormMode.swift               # shared create/edit(Value) generic
-│   │   ├── LoadFailureView.swift          # shared ViewState.failed rendering
-│   │   ├── ViewStateView.swift            # shared ViewState<Value> switch — renders the
-│   │   │                                  # loading/failed/loaded-or-refreshing view for you
+│   │   ├── Shared/                      # generic, feature-agnostic — reused across screens
+│   │   │   ├── ViewState.swift               # shared loading/loaded/refreshing/failed generic
+│   │   │   ├── FormMode.swift                 # shared create/edit(Value) generic
+│   │   │   ├── LoadFailureView.swift           # shared ViewState.failed rendering
+│   │   │   └── ViewStateView.swift             # shared ViewState<Value> switch — renders the
+│   │   │                                       # loading/failed/loaded-or-refreshing view for you
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -149,10 +148,10 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    in its initializer (never constructing it itself — that's `AppDependencies`' job).
    Validation errors and save/load failures both surface through `AppError`. If the
    ViewModel's job is "fetch a resource, show it," declare `state: ViewState<Value>`
-   (`Presentation/ViewState.swift`) — don't declare a new `enum State { case loading,
+   (`Presentation/Shared/ViewState.swift`) — don't declare a new `enum State { case loading,
    loaded, failed }` per screen (see "Shared `ViewState`" below for why). If it's instead
    "create a new X or edit an existing one," declare `mode: FormMode<Value>`
-   (`Presentation/FormMode.swift`, e.g. `AddEditItemViewModel`'s `FormMode<Item>`) rather
+   (`Presentation/Shared/FormMode.swift`, e.g. `AddEditItemViewModel`'s `FormMode<Item>`) rather
    than its own `enum Mode { case create; case edit(X) }` — same reasoning as `ViewState`,
    applied to the other recurring ViewModel shape this template has.
 4. **AppDependencies**: one stored `let` + one `make*ViewModel()` factory method.
@@ -301,20 +300,20 @@ or a singleton — the build stops them.
    instance of).
 5. **A "fetch and show" ViewModel declares `ViewState<Value>`, never its own state enum.**
    `HomeViewModel` and `ItemDetailViewModel` both declare `state: ViewState<[Item]>`/
-   `ViewState<Item>` from the one shared type in `Presentation/ViewState.swift`, instead of
+   `ViewState<Item>` from the one shared type in `Presentation/Shared/ViewState.swift`, instead of
    each writing its own `enum State { case loading, loaded, failed }`. Not mechanically
    enforced the way rules 1–2 are (no SwiftLint check for "did you reuse the shared type"),
    but it's the one existing example both current ViewModels already follow — copy it.
 
-   This is deliberately the *opposite* of Iris's actual pattern: Iris has ~18 separate
-   `XViewState`/`XViewStates` files (one per screen — `SplashViewStates`,
+   This is deliberately the *opposite* of the anti-pattern it's meant to head off: a
+   codebase with a separate `XViewState`/`XViewStates` file per screen (`SplashViewStates`,
    `LoginViewStates`, `AccountsListingViewStates`, ...), each hand-writing a near-identical
    loading/loaded/error shape, several with manually-written `Equatable` conformances that
    Swift could have synthesized, and one with a doc comment copy-pasted from a *different*
    screen's state file that was never updated ("Represents the possible states of the
-   login process" — on `SplashViewStates.swift`). Five separate `ViewStateTests`/
-   `ViewStateTests2`–`5` files testing that duplicated shape is the natural result of not
-   extracting it once. `ViewState<Value>` exists so this template doesn't repeat that.
+   login process" on a splash screen's state file). Five near-identical `ViewStateTests`
+   files testing that duplicated shape is the natural result of not extracting it once.
+   `ViewState<Value>` exists so this template doesn't repeat that.
 
    `ViewState<Value>` has a `.refreshing(Value)` case, distinct from `.loading`, for exactly
    one reason: a re-fetch (search term changed, pull-to-refresh, delete-then-reload) should
@@ -334,7 +333,7 @@ or a singleton — the build stops them.
 6. **A view rendering a `ViewState<Value>` uses `ViewStateView`, never its own
    `switch state { case .loading: ... }`.** `HomeSplitView`'s sidebar, `ItemDetailView`'s
    body, and `AddEditItemView`'s `priorityPicker` each wrote that switch by hand before
-   `Presentation/ViewStateView.swift` extracted it — same duplication `ViewState<Value>`
+   `Presentation/Shared/ViewStateView.swift` extracted it — same duplication `ViewState<Value>`
    itself was created to avoid, one layer up, in the *view* instead of the *ViewModel*.
    `ViewStateView(state:failureTitle:loaded:)` covers the common case (loading spinner,
    full-screen `LoadFailureView`, your content for `.loaded`/`.refreshing`); pass an
@@ -394,7 +393,7 @@ priorities on every reload, including every debounced search — fine while that
 lookup data; cache it separately if that ever measurably matters.)
 
 Neither approach requires changing `ViewState` itself — it stays exactly as generic as
-`Presentation/ViewState.swift` already defines it either way.
+`Presentation/Shared/ViewState.swift` already defines it either way.
 
 ## Architecture notes
 
