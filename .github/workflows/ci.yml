@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen and SwiftLint
+        run: brew install xcodegen swiftlint
+
+      - name: Generate project
+        run: xcodegen generate
+
+      # The project.yml build-phase SwiftLint script deliberately no-ops when CI=true
+      # (GitHub Actions sets this automatically) to keep local builds fast without
+      # skipping lint locally — see project.yml's preBuildScripts comment. That means
+      # the two `severity: error` custom_rules (no concrete Data type in Presentation,
+      # no new singletons) only actually gate PRs if lint runs as its own step here.
+      - name: Lint
+        run: swiftlint lint --strict
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project AppTemplate.xcodeproj \
+            -scheme AppTemplate-Dev \
+            -configuration Debug-DEV \
+            -destination 'generic/platform=iOS Simulator'
+
+      - name: Test
+        run: |
+          DEVICE=$(xcrun simctl list devices available | grep -m 1 "iPhone" | sed -E 's/^ *([^(]+) \(.*/\1/' | sed -E 's/ *$//')
+          echo "Testing on: $DEVICE"
+          xcodebuild test \
+            -project AppTemplate.xcodeproj \
+            -scheme AppTemplate-Dev \
+            -configuration Debug-DEV \
+            -destination "platform=iOS Simulator,name=$DEVICE"
