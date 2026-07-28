@@ -1,5 +1,7 @@
 # AppTemplate
 
+[![CI](https://github.com/RanveerSingh1997/AppTemplate/actions/workflows/ci.yml/badge.svg)](https://github.com/RanveerSingh1997/AppTemplate/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/RanveerSingh1997)
 
 A starting-point SwiftUI iOS app: Clean Architecture (Core / Domain / Data / Presentation),
@@ -61,6 +63,8 @@ AppTemplate/
 │   │   ├── ViewState.swift             # shared loading/loaded/refreshing/failed generic
 │   │   ├── FormMode.swift               # shared create/edit(Value) generic
 │   │   ├── LoadFailureView.swift          # shared ViewState.failed rendering
+│   │   ├── ViewStateView.swift            # shared ViewState<Value> switch — renders the
+│   │   │                                  # loading/failed/loaded-or-refreshing view for you
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -106,11 +110,19 @@ branching needed.
 
 ## Making it your app
 
-1. Rename the target/product: in `project.yml` replace `AppTemplate` (target name,
-   `PRODUCT_NAME`) and the three `Config/*.xcconfig` files' `APP_BUNDLE_IDENTIFIER`/
-   `APP_NAME` values with your app's identity, then `xcodegen generate` again. Rename the
-   `AppTemplate/` and `AppTemplateTests/` folders and `TemplateApp.swift`'s `@main` struct
-   to match.
+1. Rename the target/product: `Scripts/bootstrap-new-project.sh <NewName>
+   [bundle-id-prefix]` automates this step — target/`PRODUCT_NAME`, the three
+   `Config/*.xcconfig` files' `APP_BUNDLE_IDENTIFIER`/`APP_NAME`, the `AppTemplate/`/
+   `AppTemplateTests/` folders, `TemplateApp.swift`'s `@main` struct, `.swiftlint.yml`'s
+   `included:` paths, and every test's `@testable import`, then runs `xcodegen generate`
+   for you. Run it with `--dry-run` first to preview; see the script's own header comment
+   for exactly what it does and doesn't touch (schemes and the `.xcodeproj` filename stay
+   as `AppTemplate-Dev`/`AppTemplate.xcodeproj` — cosmetic, not asked for by this list, and
+   documented in the script). Or do it by hand: in `project.yml` replace `AppTemplate`
+   (target name, `PRODUCT_NAME`) and the three `Config/*.xcconfig` files'
+   `APP_BUNDLE_IDENTIFIER`/`APP_NAME` values with your app's identity, then `xcodegen
+   generate` again. Rename the `AppTemplate/` and `AppTemplateTests/` folders and
+   `TemplateApp.swift`'s `@main` struct to match.
 2. Replace the `Item` domain model (`Domain/Models/Item.swift`), `ItemDTO`
    (`Data/DTOs/ItemDTO.swift`), `CachedItem` (`Data/Persistence/CachedItem.swift`),
    `ItemMapper` (`Data/Mappers/ItemMapper.swift`), `ItemRepository` protocol, and its two
@@ -318,6 +330,17 @@ or a singleton — the build stops them.
    Bool`, a `searchText: String` whose non-empty state implies "searching" — rather than
    growing `ViewState` with a `reason` enum every screen would have to handle whether or not
    it's relevant. Keep the shared type generic; put feature-specific "why" on the feature.
+
+6. **A view rendering a `ViewState<Value>` uses `ViewStateView`, never its own
+   `switch state { case .loading: ... }`.** `HomeSplitView`'s sidebar, `ItemDetailView`'s
+   body, and `AddEditItemView`'s `priorityPicker` each wrote that switch by hand before
+   `Presentation/ViewStateView.swift` extracted it — same duplication `ViewState<Value>`
+   itself was created to avoid, one layer up, in the *view* instead of the *ViewModel*.
+   `ViewStateView(state:failureTitle:loaded:)` covers the common case (loading spinner,
+   full-screen `LoadFailureView`, your content for `.loaded`/`.refreshing`); pass an
+   explicit `failed:` builder instead of `failureTitle:` for an inline failure
+   presentation, as `AddEditItemView.priorityPicker` does (a plain secondary-style `Text`,
+   not a full `LoadFailureView`, since it's one row inside a form, not the whole screen).
 
 ## Consuming multiple fetched data sources on one screen
 
