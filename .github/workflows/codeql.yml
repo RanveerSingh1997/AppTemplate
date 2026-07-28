@@ -27,7 +27,10 @@ jobs:
     #   - https://gh.io/supported-runners-and-hardware-resources
     #   - https://gh.io/using-larger-runners (GitHub.com only)
     # Consider using larger runners or machines with greater resources for possible analysis time improvements.
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    # macos-latest's Homebrew refuses to install under Rosetta 2 into the arm64 prefix
+    # ("Cannot install under Rosetta 2 in ARM default prefix") - macos-15 (same image
+    # ci.yml uses successfully) doesn't hit this.
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-15') || 'ubuntu-latest' }}
     permissions:
       # required for all workflows
       security-events: write
