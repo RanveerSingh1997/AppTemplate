@@ -24,7 +24,7 @@ final class AppDependencies {
 
     // A hardcoded, compile-time-valid URL, only ever reached if AppConfiguration.apiBaseURL()
     // itself fails — i.e. a broken xcconfig, not a runtime condition to design around.
-    private static let fallbackBaseURL = URL(string: "https://dev-api.example.com")! // swiftlint:disable:this force_unwrapping
+    private static let fallbackBaseURL = URL(string: "https://dev-api.example.com")!
 
     init() {
         environment = .current
