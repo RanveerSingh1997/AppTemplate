@@ -64,17 +64,12 @@ struct HomeSplitView: View {
         }
     }
 
-    @ViewBuilder
     private var sidebar: some View {
-        switch viewModel.state {
-        case .loading:
-            ProgressView()
-        case .failed(let message):
-            LoadFailureView(title: "Couldn't Load Items", message: message)
-        case .loaded(let data), .refreshing(let data):
-            // Same list for both — `.refreshing` keeps the previous items on screen while a
-            // new fetch is in flight (search, delete-then-reload) instead of blanking to a
-            // spinner; the toolbar's ProgressView (below) is the only visible difference.
+        // Same list for `.loaded`/`.refreshing` — `.refreshing` keeps the previous items on
+        // screen while a new fetch is in flight (search, delete-then-reload) instead of
+        // blanking to a spinner; the toolbar's ProgressView (below) is the only visible
+        // difference.
+        ViewStateView(state: viewModel.state, failureTitle: "Couldn't Load Items") { data in
             if data.items.isEmpty {
                 emptyState
             } else {

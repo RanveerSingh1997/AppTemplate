@@ -58,20 +58,16 @@ struct AddEditItemView: View {
         .task { await viewModel.loadPriorities() }
     }
 
-    @ViewBuilder
     private var priorityPicker: some View {
-        switch viewModel.priorityOptions {
-        case .loading:
-            ProgressView()
-        case .failed(let message):
-            Text(message).foregroundStyle(.secondary)
-        case .loaded(let priorities), .refreshing(let priorities):
+        ViewStateView(state: viewModel.priorityOptions) { priorities in
             Picker("Priority", selection: $viewModel.selectedPriorityID) {
                 Text("None").tag(String?.none)
                 ForEach(priorities) { priority in
                     Text(priority.name).tag(Optional(priority.id))
                 }
             }
+        } failed: { message in
+            Text(message).foregroundStyle(.secondary)
         }
     }
 }
