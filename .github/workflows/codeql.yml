@@ -86,15 +86,17 @@ jobs:
     # there's no Package.swift - this isn't an SPM package. Generate the project and
     # build it the same way ci.yml does.
     #
-    # `arch -arm64`: CodeQL's build-tracing wrapper runs this step's shell under Rosetta
-    # 2 even on Apple Silicon runners, and Homebrew refuses to install into the arm64
+    # `arch -arm64` shell: CodeQL's build-tracing wrapper runs this step under Rosetta 2
+    # even on Apple Silicon runners, and Homebrew refuses to install into the arm64
     # prefix (/opt/homebrew) from a translated process ("Cannot install under Rosetta 2
     # in ARM default prefix") - its own error message points at this exact workaround.
+    # Overriding the whole step's shell (not just prefixing `brew`) so xcodegen/xcodebuild
+    # run natively too, not just the install.
     - name: Run manual build steps
       if: matrix.build-mode == 'manual'
-      shell: bash
+      shell: arch -arm64 /bin/bash --noprofile --norc -eo pipefail {0}
       run: |
-        arch -arm64 brew install xcodegen
+        brew install xcodegen
         xcodegen generate
         xcodebuild build \
           -project AppTemplate.xcodeproj \
