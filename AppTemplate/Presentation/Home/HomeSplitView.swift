@@ -135,3 +135,23 @@ struct HomeSplitView: View {
         }
     }
 }
+
+#Preview {
+    // Shared mock instances (not one-off per closure) so the list, detail, and edit
+    // sheet all reflect the same underlying data - mirrors AppDependencies wiring.
+    let itemRepository = MockItemRepositoryImpl()
+    let priorityRepository = MockPriorityRepositoryImpl()
+    return HomeSplitView(
+        viewModel: HomeViewModel(repository: itemRepository, priorityRepository: priorityRepository),
+        coordinator: NavigationCoordinator(),
+        makeDetailViewModel: { id in ItemDetailViewModel(itemID: id, repository: itemRepository) },
+        makeFormViewModel: { route in
+            let mode: FormMode<Item>
+            switch route {
+            case .create: mode = .create
+            case .edit(let item): mode = .edit(item)
+            }
+            return AddEditItemViewModel(mode: mode, repository: itemRepository, priorityRepository: priorityRepository)
+        }
+    )
+}

@@ -71,3 +71,25 @@ struct AddEditItemView: View {
         }
     }
 }
+
+#Preview("Create") {
+    AddEditItemView(
+        viewModel: AddEditItemViewModel(
+            mode: .create,
+            repository: MockItemRepositoryImpl(),
+            priorityRepository: MockPriorityRepositoryImpl()
+        ),
+        onSaved: { _ in }
+    )
+}
+
+#Preview("Edit") {
+    AddEditItemView(
+        viewModel: AddEditItemViewModel(
+            mode: .edit(MockItemRepositoryImpl.sampleItems[0]),
+            repository: MockItemRepositoryImpl(),
+            priorityRepository: MockPriorityRepositoryImpl()
+        ),
+        onSaved: { _ in }
+    )
+}

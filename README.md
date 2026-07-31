@@ -62,8 +62,9 @@ AppTemplate/
 │   │   │   ├── ViewState.swift               # shared loading/loaded/refreshing/failed generic
 │   │   │   ├── FormMode.swift                 # shared create/edit(Value) generic
 │   │   │   ├── LoadFailureView.swift           # shared ViewState.failed rendering
-│   │   │   └── ViewStateView.swift             # shared ViewState<Value> switch — renders the
-│   │   │                                       # loading/failed/loaded-or-refreshing view for you
+│   │   │   ├── ViewStateView.swift             # shared ViewState<Value> switch — renders the
+│   │   │   │                                   # loading/failed/loaded-or-refreshing view for you
+│   │   │   └── Spacing.swift                    # named spacing scale — small/medium/large
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -162,6 +163,14 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
 6. **Tests**: a ViewModel test against the mock repository, plus a mock-repository test
    for any new CRUD method — see `AppTemplateTests/HomeViewModelTests.swift` and
    `AppTemplateTests/MockItemRepositoryImplTests.swift`.
+7. **Preview**: a `#Preview` block wiring the mock repositories directly (see any existing
+   view for the pattern) — every view in this template has one, so Xcode's canvas is a
+   faster loop than the simulator for iterating on layout. Constructing a `Mock*Impl`
+   directly is the one place Presentation code is allowed to reach for a concrete type
+   instead of a protocol (`no_concrete_impl_outside_composition_root` exempts `Mock*Impl`
+   for exactly this) — a real `...Impl` still isn't allowed and still fails the build.
+   Use `Spacing.small`/`.medium`/`.large` (`Presentation/Shared/Spacing.swift`) for any
+   `VStack`/`HStack` spacing instead of a numeric literal.
 
 ## What's built but not yet wired in
 

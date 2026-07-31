@@ -71,12 +71,16 @@ identifier_name:
 custom_rules:
   no_concrete_impl_outside_composition_root:
     included: ".*/Presentation/.*\\.swift"
-    regex: '\b\w+(RepositoryImpl|ServiceImpl)\b'
+    # `(?!Mock)` exempts Mock*Impl types: #Preview blocks construct them directly (that's
+    # what they're for — canned data for fast iteration, never shipped as "real"
+    # Presentation logic), so this only fires for a genuine live ...Impl.
+    regex: '\b(?!Mock)\w+(RepositoryImpl|ServiceImpl)\b'
     match_kinds: [identifier, typeidentifier]
     message: >
       Presentation code must depend on the protocol (e.g. `ItemRepository`), never a
       concrete `...Impl` type. Only AppDependencies (the composition root) may construct
-      one — inject it through a ViewModel's initializer instead.
+      one — inject it through a ViewModel's initializer instead. (Mock*Impl types are
+      exempt — #Preview blocks are expected to construct those directly.)
     severity: error
 
   no_new_singletons:

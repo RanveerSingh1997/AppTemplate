@@ -12,7 +12,7 @@ struct ItemDetailView: View {
     var body: some View {
         ViewStateView(state: viewModel.state, failureTitle: "Couldn't Load Item") { item in
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Spacing.medium) {
                     Text(item.title).font(.title.bold())
                     Text(item.detail).font(.body)
                 }
@@ -31,5 +31,14 @@ struct ItemDetailView: View {
             }
         }
         .task { await viewModel.load() }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        ItemDetailView(
+            viewModel: ItemDetailViewModel(itemID: "1", repository: MockItemRepositoryImpl()),
+            coordinator: NavigationCoordinator()
+        )
     }
 }

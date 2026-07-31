@@ -10,7 +10,7 @@ struct SplashView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.large) {
             Image(systemName: "app.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(.tint)
@@ -22,4 +22,8 @@ struct SplashView: View {
             if viewModel.isReady { onFinished() }
         }
     }
+}
+
+#Preview {
+    SplashView(viewModel: SplashViewModel()) {}
 }

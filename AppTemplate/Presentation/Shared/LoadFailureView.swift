@@ -11,3 +11,7 @@ struct LoadFailureView: View {
         ContentUnavailableView(title, systemImage: "exclamationmark.triangle", description: Text(message))
     }
 }
+
+#Preview {
+    LoadFailureView(title: "Couldn't Load Items", message: "The network connection appears to be offline.")
+}

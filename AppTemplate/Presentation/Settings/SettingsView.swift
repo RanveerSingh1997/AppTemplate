@@ -28,7 +28,7 @@ struct SettingsView: View {
 
 private struct AboutView: View {
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.medium) {
             Image(systemName: "app.badge.checkmark")
                 .font(.system(size: 48))
                 .foregroundStyle(.tint)
@@ -41,4 +41,12 @@ private struct AboutView: View {
         }
         .navigationTitle("About")
     }
+}
+
+#Preview {
+    SettingsView(viewModel: SettingsViewModel(environment: .dev), coordinator: NavigationCoordinator())
+}
+
+#Preview("About") {
+    NavigationStack { AboutView() }
 }

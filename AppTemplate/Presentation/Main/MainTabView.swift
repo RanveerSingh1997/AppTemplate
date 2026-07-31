@@ -21,3 +21,9 @@ struct MainTabView: View {
         }
     }
 }
+
+#Preview {
+    // AppEnvironment.current falls back to .dev when the ENVName Info.plist key isn't
+    // set (true in an Xcode Preview), so this wires the in-memory mock repositories.
+    MainTabView(dependencies: AppDependencies())
+}
