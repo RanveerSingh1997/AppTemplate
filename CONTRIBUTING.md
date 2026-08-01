@@ -65,6 +65,9 @@ section for the full list and reasoning. The short version:
   alongside `fetchItems`), never a `page:`/`offset:` parameter bolted onto the existing
   fetch — see the README's "Pagination" section for why the cache-pruning logic depends
   on that split.
+- A new deep-link route is a new case in `NavigationCoordinator.handle(url:)` — never a
+  second `.onOpenURL` elsewhere. See the README's "Deep linking" section for why that's
+  also where universal links plug in later with no other code changing.
 
 ## Commits and PRs
 

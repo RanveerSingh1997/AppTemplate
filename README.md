@@ -29,15 +29,19 @@ AppTemplate/
 │   │   └── AppDependencies.swift      # builds every dependency once, exposes make*ViewModel()
 │   │
 │   ├── Config/                  # per-environment xcconfig (Dev/QA/Prod) — bundle id, app
-│   │   │                        # name, API base URL; read via AppConfiguration
+│   │   │                        # name, API base URL; read via AppConfiguration. The
+│   │   │                        # apptemplate:// URL scheme (see "Deep linking") is
+│   │   │                        # registered in project.yml's target.info, not here —
+│   │   │                        # it's the same across environments
 │   │   ├── DevConfig.xcconfig
 │   │   ├── QAConfig.xcconfig
 │   │   └── ProdConfig.xcconfig
 │   │
 │   ├── Core/                    # infrastructure that isn't Domain/Data/Presentation
 │   │   ├── Config/                    # AppEnvironment, AppConfiguration (reads xcconfig values)
-│   │   ├── Coordinator/                # NavigationCoordinator, AppRoute, ItemFormRoute,
-│   │   │                                # AuthSessionStore — see "Authentication"
+│   │   ├── Coordinator/                # NavigationCoordinator, AppRoute, AppTab, ItemFormRoute,
+│   │   │                                # AuthSessionStore — see "Authentication" and
+│   │   │                                # "Deep linking"
 │   │   └── Services/
 │   │       ├── Impl/                   # real implementations (Keychain, NWPathMonitor, console,
 │   │       │                           # AlertCenter — see "Alerts & toasts" for its naming)
@@ -712,6 +716,40 @@ something a ViewModel mediates.
 reference `MockAuthRepositoryImpl` — and passed into `LoginViewModel` as a plain `String?`,
 rather than `LoginViewModel` importing that concrete Data-layer type itself to read
 `.demoEmail`/`.demoPassword` directly.
+
+## Deep linking
+
+The `apptemplate://` URL scheme (registered in `project.yml`'s `target.info.properties` —
+see `Config/` in the folder structure above) routes through one place:
+`NavigationCoordinator.handle(url:)`, called from `AppContainerView`'s `.onOpenURL`:
+
+```swift
+xcrun simctl openurl booted "apptemplate://items/42"      // Home tab, item 42 selected
+xcrun simctl openurl booted "apptemplate://settings"       // Settings tab
+xcrun simctl openurl booted "apptemplate://settings/about" // Settings tab, About pushed
+```
+
+**Works before login, for free.** `NavigationCoordinator` is one instance `AppDependencies`
+builds once and both `LoginView`'s post-auth `MainTabView` and (indirectly) `AppContainerView`
+read from — so a link opened while `LoginView` is still showing just sets
+`selectedTab`/`selectedItemID` on that instance and sits there; once the user logs in and
+`MainTabView` mounts, `TabView(selection: $coordinator.selectedTab)` and `HomeSplitView`'s
+`coordinator.selectedItemID` binding already reflect it. No pending-deep-link queue needed —
+verified live: open an `items/` link on the login screen, log in, land straight on that
+item's detail view.
+
+`AppTab` (`Core/Coordinator/NavigationCoordinator.swift`) — `.home`/`.settings` — exists
+specifically so `MainTabView`'s `TabView` has a `selection:` a deep link (or anything else)
+can set programmatically; without it, `TabView` manages its own selection privately and
+nothing outside the view can switch tabs.
+
+**Universal links reuse the same seam.** `.onOpenURL` fires for `https://` universal links
+too, once an app adds the Associated Domains entitlement and hosts an
+`apple-app-site-association` file — both require a real domain to set up and verify, so
+they're not included here (same reasoning as the "What's deliberately not here" section).
+`NavigationCoordinator.handle(url:)` doesn't need to change at all when that's added: it
+already works off `URL.host`/`.pathComponents`, which mean the same thing for
+`https://yourapp.com/items/42` as for `apptemplate://items/42`.
 
 ## Architecture notes
 

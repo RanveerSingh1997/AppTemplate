@@ -39,5 +39,8 @@ struct AppContainerView: View {
             Text(startupError?.localizedDescription ?? AppStrings.usingTemporaryInMemoryStore)
         }
         .alertCenterOverlay(dependencies.alertCenter)
+        .onOpenURL { url in
+            dependencies.coordinator.handle(url: url)
+        }
     }
 }

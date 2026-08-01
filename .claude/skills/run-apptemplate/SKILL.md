@@ -45,6 +45,9 @@ D=.claude/skills/run-apptemplate/driver.sh
 "$D" tap 369 83                 # tap a point — get coordinates from `describe` or a screenshot
 "$D" text "New Item"            # type into whatever's focused
 "$D" terminate                  # stop the app
+
+xcrun simctl openurl booted "apptemplate://items/42"  # deep link — not a driver.sh
+                                                        # subcommand, plain simctl works fine
 ```
 
 Screenshot pixel dimensions are 3x the point coordinates `tap`/`describe` use
@@ -90,7 +93,7 @@ print(next(x['udid'] for v in d['devices'].values() for x in v if x['name']==nam
 ")" -derivedDataPath build test
 ```
 
-48 tests in 9 suites, ~1s runtime, all pass. (The device-resolution one-liner above
+57 tests in 10 suites, ~1s runtime, all pass. (The device-resolution one-liner above
 duplicates `driver.sh`'s internal `udid()` helper since `xcodebuild test` needs a
 `-destination` flag the driver doesn't expose as a subcommand — simplest to inline it.)
 
@@ -131,6 +134,11 @@ duplicates `driver.sh`'s internal `udid()` helper since `xcodebuild test` needs 
 - **A stale `idb_companion` process can persist across unrelated sessions** — if `idb`
   commands report a nonsensical target architecture or hang, `pkill -f idb_companion &&
   rm -f /tmp/idb/*.sock` and let `driver.sh boot` (via `idb connect`) spawn a fresh one.
+- **The first `xcrun simctl openurl` for a given install shows an "Open in AppTemplate
+  (Dev)"? system confirmation dialog** before the app actually receives the URL — tap
+  Open (a screenshot's button coordinates work; this dialog isn't in `describe-all`'s
+  accessibility tree, being a system alert not app content). Subsequent links in the same
+  install don't re-prompt.
 
 ## Troubleshooting
 

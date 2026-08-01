@@ -1,5 +1,5 @@
-// QA environment. Values here become build settings; INFOPLIST_KEY_* settings in
-// project.yml copy the ones the app reads at runtime into Info.plist.
+// QA environment. Values here become build settings; project.yml's
+// target.info.properties block copies the ones the app reads at runtime into Info.plist.
 // Note: "//" starts a comment in xcconfig syntax, so URLs escape it as "\/\/".
 APP_NAME = AppTemplate (QA)
 APP_BUNDLE_IDENTIFIER = com.yourcompany.apptemplate.qa

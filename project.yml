@@ -44,9 +44,23 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_IDENTIFIER)
         PRODUCT_NAME: AppTemplate
-        INFOPLIST_KEY_CFBundleDisplayName: $(APP_NAME)
-        INFOPLIST_KEY_APIBaseURL: $(BASE_URL)
-        INFOPLIST_KEY_ENVName: $(ENV_NAME)
+    # A physical plist (rather than relying on GENERATE_INFOPLIST_FILE's INFOPLIST_KEY_*
+    # synthesis alone) is required for CFBundleURLTypes, since that's a nested
+    # array-of-dicts an INFOPLIST_KEY_* build setting can't express. Once an explicit
+    # INFOPLIST_FILE is in play, Xcode only auto-merges INFOPLIST_KEY_* for its own
+    # well-known keys (e.g. CFBundleDisplayName) — custom keys like APIBaseURL/ENVName
+    # need to be listed here explicitly too, or they silently vanish from the built app's
+    # Info.plist. Verified by inspecting the built .app's actual Info.plist after this
+    # config landed.
+    info:
+      path: AppTemplate/Generated-Info.plist
+      properties:
+        CFBundleDisplayName: $(APP_NAME)
+        APIBaseURL: $(BASE_URL)
+        ENVName: $(ENV_NAME)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - apptemplate
     preBuildScripts:
       - name: SwiftLint
         basedOnDependencyAnalysis: false
