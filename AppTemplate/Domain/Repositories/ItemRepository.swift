@@ -7,6 +7,10 @@ protocol ItemRepository {
     /// `search` is threaded all the way to `APIEndpoint.items(search:)`'s query parameter
     /// (and used to filter the cache-fallback path) — see `ItemRepositoryImpl`.
     func fetchItems(search: String?) async throws -> [Item]
+    /// The next page after whatever `fetchItems`/a prior `fetchMoreItems` call already
+    /// returned — `offset` is the count of items the caller already has, not a page number,
+    /// so the caller never needs to track page size. Returns `[]` once there's nothing more.
+    func fetchMoreItems(search: String?, offset: Int) async throws -> [Item]
     func fetchItem(id: String) async throws -> Item?
     func createItem(title: String, detail: String, priorityID: String?) async throws -> Item
     func updateItem(_ item: Item) async throws -> Item

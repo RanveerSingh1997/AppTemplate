@@ -122,6 +122,17 @@
         }
       }
     },
+    "Couldn't Load More Items" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't Load More Items"
+          }
+        }
+      }
+    },
     "Couldn't Open Local Storage" : {
       "extractionState" : "manual",
       "localizations" : {

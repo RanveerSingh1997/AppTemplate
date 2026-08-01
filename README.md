@@ -439,6 +439,44 @@ lookup data; cache it separately if that ever measurably matters.)
 Neither approach requires changing `ViewState` itself — it stays exactly as generic as
 `Presentation/Shared/ViewState.swift` already defines it either way.
 
+## Pagination
+
+`ItemRepository.fetchItems(search:)` returns one page; a second protocol method,
+`fetchMoreItems(search:offset:)`, returns the next one — `offset` is just "how many items
+the caller already has," so `HomeViewModel` never needs to know a page size:
+
+```swift
+func loadMore() async {
+    guard hasMoreItems, !isLoadingMore, let current = state.value else { return }
+    isLoadingMore = true
+    defer { isLoadingMore = false }
+    let newItems = try await repository.fetchMoreItems(search: search, offset: current.items.count)
+    hasMoreItems = !newItems.isEmpty
+    state = .loaded(HomeScreenData(items: current.items + newItems, priorities: current.priorities))
+}
+```
+
+`HomeSplitView` triggers it from the last row's `.onAppear` — the standard "infinite
+scroll" hook — and shows a footer `ProgressView` while `isLoadingMore`. A failed
+`loadMore()` is an alert (`AlertService`), not `state = .failed(...)`, for the same reason
+a failed delete is: the list already on screen loaded fine, only the next page didn't.
+
+**Why a second method instead of a `page:`/`offset:` parameter on `fetchItems` itself**:
+`fetchItems(search:)` staying page-less keeps its existing contract — "the current
+complete-enough list to show, cached for offline" — unchanged for every other call site.
+That matters because `ItemRepositoryImpl`'s SwiftData cache used to treat *every* fetch's
+DTOs as the complete set and delete any cached row not present in them; a page's worth of
+DTOs would make every other page's cached rows look stale. `fetchItems` still does that
+prune (`upsert` + `pruneStale`); `fetchMoreItems` only `upsert`s, never prunes — safe to
+call with a partial set, at the cost of no offline fallback for a failed load-more (a
+documented, deliberate simplification, not an oversight).
+
+One more knock-on effect worth knowing about if you copy this pattern: `fetchItem(id:)`
+(used by `ItemDetailViewModel`) can no longer assume `fetchItems().first { $0.id == id }`
+will find the item — that only searches the first page. `ItemRepositoryImpl.fetchItem(id:)`
+checks the local SwiftData cache first instead (which holds every page ever fetched, via
+`fetchMoreItems`'s upsert), falling back to a full fetch only if the cache misses.
+
 ## Localization
 
 Every user-facing string is a `Domain/AppStrings.swift` symbol backed by a

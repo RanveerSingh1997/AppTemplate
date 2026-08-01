@@ -8,7 +8,7 @@ import Foundation
 /// actually gets crowded — one small file beats speculative per-feature files for the one
 /// feature this template ships.
 enum APIEndpoint {
-    case fetchItems(search: String?)
+    case fetchItems(search: String?, offset: Int = 0)
     case createItem
     case updateItem(id: String)
     case deleteItem(id: String)
@@ -47,8 +47,15 @@ enum APIEndpoint {
     }
 
     var queryItems: [URLQueryItem] {
-        guard case .fetchItems(let search) = self, let search, !search.isEmpty else { return [] }
-        return [URLQueryItem(name: "search", value: search)]
+        guard case .fetchItems(let search, let offset) = self else { return [] }
+        var items: [URLQueryItem] = []
+        if let search, !search.isEmpty {
+            items.append(URLQueryItem(name: "search", value: search))
+        }
+        if offset > 0 {
+            items.append(URLQueryItem(name: "offset", value: String(offset)))
+        }
+        return items
     }
 
     /// Classifies a 404 by path pattern rather than by typed case — logging only ever sees

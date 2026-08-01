@@ -61,6 +61,10 @@ section for the full list and reasoning. The short version:
   `NavigationCoordinator`, `AlertCenter`) stays out of ViewModels — a ViewModel returns
   data (a token, a saved item), the View acts on it. See the README's "Authentication"
   section for why `LoginViewModel` doesn't hold `AuthSessionStore`.
+- A paginated list repository method ships as a *second* method (`fetchMoreItems`
+  alongside `fetchItems`), never a `page:`/`offset:` parameter bolted onto the existing
+  fetch — see the README's "Pagination" section for why the cache-pruning logic depends
+  on that split.
 
 ## Commits and PRs
 

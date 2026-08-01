@@ -92,38 +92,18 @@ struct HomeSplitView: View {
     }
 
     private func itemList(_ data: HomeScreenData) -> some View {
-        List(data.items, selection: $coordinator.selectedItemID) { item in
-            let isDeleting = viewModel.deletingItemIDs.contains(item.id)
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(item.title)
-                    if let priorityName = data.priorityName(for: item) {
-                        Text(priorityName)
-                            .font(Typography.caption)
-                            .foregroundStyle(Colors.secondaryText)
-                    }
-                }
-                if isDeleting {
+        List(selection: $coordinator.selectedItemID) {
+            ForEach(data.items) { item in
+                row(for: item, in: data)
+            }
+            // A trailing row, not `.overlay`/`.safeAreaInset` — it needs to scroll with the
+            // list content instead of floating over the last real row.
+            if viewModel.isLoadingMore {
+                HStack {
                     Spacer()
                     ProgressView()
+                    Spacer()
                 }
-            }
-            .tag(item.id)
-            // Blocks selection (navigating into the detail screen) and re-swiping this row
-            // while its own delete is in flight — the rest of the list stays interactive.
-            .disabled(isDeleting)
-            .swipeActions {
-                Button(role: .destructive) {
-                    Task {
-                        await viewModel.delete(id: item.id)
-                        if coordinator.selectedItemID == item.id {
-                            coordinator.selectItem(nil)
-                        }
-                    }
-                } label: {
-                    Label(AppStrings.delete, systemImage: Icons.delete)
-                }
-                .disabled(isDeleting)
             }
         }
         .toolbar {
@@ -131,6 +111,48 @@ struct HomeSplitView: View {
                 ToolbarItem(placement: .status) {
                     ProgressView()
                 }
+            }
+        }
+    }
+
+    private func row(for item: Item, in data: HomeScreenData) -> some View {
+        let isDeleting = viewModel.deletingItemIDs.contains(item.id)
+        return HStack {
+            VStack(alignment: .leading) {
+                Text(item.title)
+                if let priorityName = data.priorityName(for: item) {
+                    Text(priorityName)
+                        .font(Typography.caption)
+                        .foregroundStyle(Colors.secondaryText)
+                }
+            }
+            if isDeleting {
+                Spacer()
+                ProgressView()
+            }
+        }
+        .tag(item.id)
+        // Blocks selection (navigating into the detail screen) and re-swiping this row
+        // while its own delete is in flight — the rest of the list stays interactive.
+        .disabled(isDeleting)
+        .swipeActions {
+            Button(role: .destructive) {
+                Task {
+                    await viewModel.delete(id: item.id)
+                    if coordinator.selectedItemID == item.id {
+                        coordinator.selectItem(nil)
+                    }
+                }
+            } label: {
+                Label(AppStrings.delete, systemImage: Icons.delete)
+            }
+            .disabled(isDeleting)
+        }
+        // Fires when the last row scrolls into view — the standard "infinite scroll"
+        // trigger point, well before the user hits a hard bottom-of-list dead end.
+        .onAppear {
+            if item.id == data.items.last?.id {
+                Task { await viewModel.loadMore() }
             }
         }
     }

@@ -16,6 +16,16 @@ final class HomeViewModel {
     /// or swiping the same row twice, are both states worth preventing rather than handling.
     private(set) var deletingItemIDs: Set<String> = []
 
+    /// True while a `loadMore()` fetch is in flight — the View uses this for a footer
+    /// spinner, separately from `state`'s own `.loading`/`.refreshing`, since load-more
+    /// keeps the existing list fully visible rather than replacing it with anything.
+    private(set) var isLoadingMore = false
+    /// Set false once a `loadMore()` call returns an empty page — stops further
+    /// `loadMore()` calls (e.g. from repeated `onAppear` on the last row) once the list is
+    /// known to be exhausted. Reset on every `load()`, since a fresh load may have fewer or
+    /// more items than before (e.g. a search term change).
+    private var hasMoreItems = true
+
     private let repository: ItemRepository
     private let priorityRepository: PriorityRepository
     private let alertService: AlertService
@@ -32,6 +42,7 @@ final class HomeViewModel {
         // re-fetch — e.g. a search term changing — rather than blanking to `.loading`.
         // Only the true first load, with nothing yet to show, uses `.loading`.
         state = state.value.map(ViewState.refreshing) ?? .loading
+        hasMoreItems = true
         do {
             let search = searchText.isEmpty ? nil : searchText
             // Both fetches start concurrently; `async let` cancels whichever hasn't
@@ -60,6 +71,26 @@ final class HomeViewModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             await load()
+        }
+    }
+
+    /// Call when the last visible row appears (see `HomeSplitView`). A no-op while a page
+    /// is already loading or once `hasMoreItems` is known false, so a fast scroll or a
+    /// slow-loading view can't fire this repeatedly for the same page.
+    func loadMore() async {
+        guard hasMoreItems, !isLoadingMore, let current = state.value else { return }
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+
+        do {
+            let search = searchText.isEmpty ? nil : searchText
+            let newItems = try await repository.fetchMoreItems(search: search, offset: current.items.count)
+            hasMoreItems = !newItems.isEmpty
+            state = .loaded(HomeScreenData(items: current.items + newItems, priorities: current.priorities))
+        } catch {
+            // An alert, not `state = .failed(...)` — the list that's already on screen
+            // loaded fine; only the next page failed.
+            alertService.showAlert(title: AppStrings.couldntLoadMoreItems, message: error.localizedDescription)
         }
     }
 

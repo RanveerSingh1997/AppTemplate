@@ -40,7 +40,7 @@ struct HomeViewModelTests {
             Issue.record("Expected .loaded state, got \(viewModel.state)")
             return
         }
-        #expect(data.items.count == MockItemRepositoryImpl.sampleItems.count)
+        #expect(data.items.count == MockItemRepositoryImpl.pageSize)
     }
 
     @Test
@@ -111,6 +111,37 @@ struct HomeViewModelTests {
             Issue.record("Expected final state to be .loaded, got \(viewModel.state)")
             return
         }
+    }
+
+    @Test
+    func loadMoreAppendsTheNextPageWithoutReplacingWhatsAlreadyLoaded() async {
+        let viewModel = makeViewModel()
+        await viewModel.load()
+
+        await viewModel.loadMore()
+
+        guard case .loaded(let data) = viewModel.state else {
+            Issue.record("Expected .loaded after loadMore, got \(viewModel.state)")
+            return
+        }
+        #expect(data.items.count == MockItemRepositoryImpl.pageSize * 2)
+        #expect(data.items.first?.title == "First Item")
+    }
+
+    @Test
+    func loadMoreStopsCallingTheRepositoryOnceExhausted() async {
+        let repository = MockItemRepositoryImpl(
+            items: Array(MockItemRepositoryImpl.sampleItems.prefix(MockItemRepositoryImpl.pageSize))
+        )
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.load()
+
+        await viewModel.loadMore()
+        guard case .loaded(let data) = viewModel.state else {
+            Issue.record("Expected .loaded, got \(viewModel.state)")
+            return
+        }
+        #expect(data.items.count == MockItemRepositoryImpl.pageSize)
     }
 
     @Test

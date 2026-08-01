@@ -20,7 +20,8 @@ final class ItemRepositoryImpl: ItemRepository {
     func fetchItems(search: String?) async throws -> [Item] {
         do {
             let dtos: [ItemDTO] = try await apiClient.send(APIRequest(endpoint: .fetchItems(search: search)))
-            cache(dtos)
+            upsert(dtos)
+            pruneStale(against: dtos)
             return dtos.map(\.asDomain)
         } catch {
             let cached = try fetchCached(matching: search)
@@ -29,8 +30,26 @@ final class ItemRepositoryImpl: ItemRepository {
         }
     }
 
+    // ponytail: no cache fallback here (unlike `fetchItems`) — a failed load-more just
+    // propagates the error, since there's no meaningful "cached page 2" to fall back to.
+    func fetchMoreItems(search: String?, offset: Int) async throws -> [Item] {
+        let dtos: [ItemDTO] = try await apiClient.send(
+            APIRequest(endpoint: .fetchItems(search: search, offset: offset))
+        )
+        // Upsert only — never prune. A page fetch's DTOs are a subset of the whole list, so
+        // treating anything outside it as "stale" would delete other pages' cached rows.
+        upsert(dtos)
+        return dtos.map(\.asDomain)
+    }
+
     func fetchItem(id: String) async throws -> Item? {
-        try await fetchItems().first { $0.id == id }
+        // Checked first, not just as a network fallback: `fetchItems()` only returns the
+        // first page, so an item from a later page (already cached via `fetchMoreItems`'s
+        // upsert) would otherwise look "not found".
+        if let cached = try? modelContext.fetch(FetchDescriptor<CachedItem>()).first(where: { $0.id == id }) {
+            return cached.asDomain
+        }
+        return try await fetchItems().first { $0.id == id }
     }
 
     func createItem(title: String, detail: String, priorityID: String?) async throws -> Item {
@@ -66,9 +85,10 @@ final class ItemRepositoryImpl: ItemRepository {
         }
     }
 
-    /// Upserts fetched DTOs against existing cached entities (via the mapper) and drops
-    /// anything no longer present server-side, rather than a wholesale delete-and-reinsert.
-    private func cache(_ dtos: [ItemDTO]) {
+    /// Upserts fetched DTOs against existing cached entities (via the mapper), rather than a
+    /// wholesale delete-and-reinsert. Never deletes — safe to call with a partial (paginated)
+    /// set, unlike `pruneStale`.
+    private func upsert(_ dtos: [ItemDTO]) {
         let existing = (try? modelContext.fetch(FetchDescriptor<CachedItem>())) ?? []
         let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
 
@@ -79,12 +99,16 @@ final class ItemRepositoryImpl: ItemRepository {
                 _ = mapper.toEntity(dto: dto, context: modelContext)
             }
         }
+    }
 
-        let staleIDs = Set(existingByID.keys).subtracting(dtos.map(\.id))
-        for id in staleIDs {
-            if let stale = existingByID[id] {
-                modelContext.delete(stale)
-            }
+    /// Drops any cached row not present in `dtos`. Only safe when `dtos` is the *complete*
+    /// current set (the unpaginated `fetchItems` call) — never call this with a single
+    /// page's worth, or every other page's cached rows would look stale and get deleted.
+    private func pruneStale(against dtos: [ItemDTO]) {
+        let existing = (try? modelContext.fetch(FetchDescriptor<CachedItem>())) ?? []
+        let staleIDs = Set(existing.map(\.id)).subtracting(dtos.map(\.id))
+        for entity in existing where staleIDs.contains(entity.id) {
+            modelContext.delete(entity)
         }
     }
 

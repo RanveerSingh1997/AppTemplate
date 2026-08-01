@@ -57,9 +57,29 @@ struct MockItemRepositoryImplTests {
     }
 
     @Test
-    func fetchItemsWithNilSearchReturnsEverything() async throws {
+    func fetchItemsWithNilSearchReturnsOnlyTheFirstPage() async throws {
         let repository = MockItemRepositoryImpl()
         let results = try await repository.fetchItems(search: nil)
-        #expect(results.count == MockItemRepositoryImpl.sampleItems.count)
+        #expect(results.count == MockItemRepositoryImpl.pageSize)
+    }
+
+    @Test
+    func fetchMoreItemsReturnsTheNextPage() async throws {
+        let repository = MockItemRepositoryImpl()
+        let firstPage = try await repository.fetchItems(search: nil)
+        let secondPage = try await repository.fetchMoreItems(search: nil, offset: firstPage.count)
+
+        #expect(secondPage.count == MockItemRepositoryImpl.pageSize)
+        #expect(Set(firstPage.map(\.id)).isDisjoint(with: secondPage.map(\.id)))
+    }
+
+    @Test
+    func fetchMoreItemsReturnsEmptyPastTheEnd() async throws {
+        let repository = MockItemRepositoryImpl()
+        let results = try await repository.fetchMoreItems(
+            search: nil,
+            offset: MockItemRepositoryImpl.sampleItems.count
+        )
+        #expect(results.isEmpty)
     }
 }
