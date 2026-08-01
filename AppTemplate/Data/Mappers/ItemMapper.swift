@@ -4,10 +4,11 @@ import SwiftData
 /// The one place that knows both `ItemDTO` (network) and `CachedItem` (persistence).
 /// A renamed/reshaped API field only requires editing this file.
 struct ItemMapper: EntityMapper {
-    func toEntity(dto: ItemDTO, context: ModelContext) -> Result<CachedItem, AppError> {
+    @MainActor
+    func toEntity(dto: ItemDTO, store: SwiftDataStore<CachedItem>) -> Result<CachedItem, AppError> {
         let entity = CachedItem(id: dto.id, title: dto.name, detail: dto.description, priorityID: dto.priorityID)
         entity.markInserted()
-        context.insert(entity)
+        store.insert(entity)
         return .success(entity)
     }
 
@@ -15,7 +16,7 @@ struct ItemMapper: EntityMapper {
         .success(ItemDTO(id: entity.id, name: entity.title, description: entity.detail, priorityID: entity.priorityID))
     }
 
-    func updateEntity(_ entity: CachedItem, with dto: ItemDTO, context: ModelContext) -> Result<CachedItem, AppError> {
+    func updateEntity(_ entity: CachedItem, with dto: ItemDTO) -> Result<CachedItem, AppError> {
         entity.title = dto.name
         entity.detail = dto.description
         entity.priorityID = dto.priorityID

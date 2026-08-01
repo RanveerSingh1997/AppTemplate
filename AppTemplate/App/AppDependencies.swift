@@ -89,7 +89,8 @@ final class AppDependencies {
                 // pinnedPublicKeyHashes: [] (see PinnedCertificateValidator to enable)
             )
 
-            itemRepository = ItemRepositoryImpl(apiClient: apiClient, modelContext: container.mainContext)
+            let itemCache = SwiftDataItemCache(modelContext: container.mainContext)
+            itemRepository = ItemRepositoryImpl(apiClient: apiClient, cache: itemCache)
             priorityRepository = PriorityRepositoryImpl(apiClient: apiClient)
             authRepository = AuthRepositoryImpl(apiClient: apiClient)
             reachabilityService = ReachabilityServiceImpl()

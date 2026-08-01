@@ -54,16 +54,19 @@ AppTemplate/
 │   │   │                                # here (not Presentation/Shared) since AppError needs
 │   │   │                                # it too, and Domain can't depend on Presentation
 │   │   ├── Models/                      # Item, Priority, AuthSession — domain-facing shapes
-│   │   ├── Protocols/                   # EntityMapper, LocalTimestamped
+│   │   ├── Protocols/                   # LocalTimestamped
 │   │   ├── Repositories/                 # ItemRepository, PriorityRepository, AuthRepository
 │   │   └── Services/                     # SecureStorageService, ReachabilityService,
 │   │                                      # EventLogger, AlertService, FeatureFlagService
 │   │
 │   ├── Data/                     # concrete implementations of Domain's protocols
 │   │   ├── DTOs/                        # ItemDTO, PriorityDTO, AuthDTOs — network shapes
-│   │   ├── Mappers/                      # ItemMapper — the one place that knows DTO + persistence shape
+│   │   ├── Mappers/                      # EntityMapper, ItemMapper — the one place that
+│   │   │                                  # knows DTO + persistence shape
 │   │   ├── Networking/                   # APIClient, APIEndpoint, interceptors, retry, pinning, upload
-│   │   ├── Persistence/                   # CachedItem (SwiftData), PersistenceFactory
+│   │   ├── Persistence/                   # CachedItem (SwiftData), PersistenceFactory,
+│   │   │                                   # SwiftDataStore, ItemCache, SwiftDataItemCache
+│   │   │                                   # — see "Persistence"
 │   │   └── Repositories/                   # ItemRepositoryImpl/Mock, PriorityRepositoryImpl/Mock,
 │   │                                        # AuthRepositoryImpl/MockAuthRepositoryImpl
 │   │
@@ -148,11 +151,13 @@ branching needed.
    generate` again. Rename the `AppTemplate/` and `AppTemplateTests/` folders and
    `TemplateApp.swift`'s `@main` struct to match.
 2. Replace the `Item` domain model (`Domain/Models/Item.swift`), `ItemDTO`
-   (`Data/DTOs/ItemDTO.swift`), `CachedItem` (`Data/Persistence/CachedItem.swift`),
-   `ItemMapper` (`Data/Mappers/ItemMapper.swift`), `ItemRepository` protocol, and its two
-   implementations with your real entity. Keep the same shape: Domain owns the protocol +
-   model, Data owns the DTO/persistence types, the mapper, and both repository
-   implementations; Presentation only ever talks to the `ItemRepository` protocol.
+   (`Data/DTOs/ItemDTO.swift`), `CachedItem`/`ItemCache`/`SwiftDataItemCache`
+   (`Data/Persistence/`), `ItemMapper` (`Data/Mappers/ItemMapper.swift`), `ItemRepository`
+   protocol, and its two implementations with your real entity. Keep the same shape: Domain
+   owns the protocol + model, Data owns the DTO/persistence types, the mapper, the cache
+   seam, and both repository implementations; Presentation only ever talks to the
+   `ItemRepository` protocol — see "Persistence" for why `ItemRepositoryImpl` itself talks
+   to `ItemCache`, not SwiftData directly.
 3. Wire it into `AppDependencies.swift` — add one stored property and one branch in
    `init()` per new dependency, and one typed `make*ViewModel()` factory per screen.
    Keep each dependency's mock/live branch local to that one dependency; don't let
@@ -167,8 +172,11 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
 
 1. **Domain**: model + repository protocol (`Domain/Models`, `Domain/Repositories`).
 2. **Data**: a case in `APIEndpoint` for each new route (never a path string built inline
-   in a repository method), `ItemDTO` (network shape), an `EntityMapper` conformance
-   mapping DTO <-> persistence entity, and two repository implementations (live, mock).
+   in a repository method), `ItemDTO` (network shape), and two repository implementations
+   (live, mock). If the feature needs offline caching, add an `EntityMapper` conformance
+   mapping DTO <-> persistence entity and a cache protocol the live implementation depends
+   on — follow `ItemMapper`/`ItemCache`/`SwiftDataItemCache` (see "Persistence"); skip all
+   three if it doesn't (`PriorityRepositoryImpl` has none).
 3. **Presentation**: `@Observable @MainActor` ViewModel + `View`, taking the ViewModel
    in its initializer (never constructing it itself — that's `AppDependencies`' job).
    Validation errors and save/load failures both surface through `AppError`. If the
@@ -326,6 +334,59 @@ Tested directly (not just through the mock repository) in
 `AppTemplateTests/URLSessionAPIClientTests.swift`, which stubs `URLProtocol` to exercise
 the auth header, error-message decoding, and retry-policy logic against real (intercepted)
 HTTP round-trips.
+
+## Persistence (`Data/Persistence/`)
+
+`ItemRepositoryImpl` doesn't import SwiftData, and never sees `ModelContext` or
+`CachedItem` — it depends on `ItemCache` (a protocol), the same way it depends on
+`APIClient` (a protocol) instead of `URLSession` directly:
+
+```swift
+@MainActor
+protocol ItemCache {
+    func upsert(_ dtos: [ItemDTO])
+    func pruneStale(against dtos: [ItemDTO])
+    func fetchAll(matching search: String?) throws -> [Item]
+    func fetchByID(_ id: String) -> Item?
+    func delete(id: String)
+}
+```
+
+`SwiftDataItemCache` is the only real conformance, and the only file (besides
+`CachedItem.swift` itself) that imports SwiftData for items. Swapping persistence tech
+later — Core Data, SQLite, a flat file — means writing one new `ItemCache` conformance and
+changing one line in `AppDependencies`; none of `ItemRepositoryImpl`'s network/
+cache-fallback/pagination-safety logic has to change, because it was never written against
+SwiftData's types in the first place.
+
+**`SwiftDataStore<Entity: PersistentModel>`** is a second, smaller layer underneath that:
+generic fetch/insert/delete against any `@Model` type, so `SwiftDataItemCache` calls
+`store.fetch()` instead of writing `modelContext.fetch(FetchDescriptor<CachedItem>())` at
+each of its call sites. `fetch(_:)` takes an optional `FetchDescriptor<Entity>` — pass one
+with a `predicate` to query by field instead of fetching every row and scanning in Swift;
+`SwiftDataItemCache.fetchByID`/`delete` do exactly that against `CachedItem`'s unique `id`,
+where `upsert`/`pruneStale` still call `store.fetch()` with no predicate since they
+genuinely need every cached row to diff against. It's still SwiftData-specific —
+`PersistentModel`/`FetchDescriptor`/`#Predicate` are SwiftData's own vocabulary, so this
+doesn't (and isn't meant to) hide *that* framework dependency the way `ItemCache` hides it
+from `ItemRepositoryImpl`. It exists to remove the boilerplate repetition of working with
+SwiftData directly, not to make SwiftData itself swappable — `ItemCache` is what does that.
+Add a second `SwiftData*Cache` for another entity later and it reuses the same store.
+
+`ItemMapper` (`Data/Mappers/ItemMapper.swift`) also takes `SwiftDataStore<CachedItem>`
+rather than a raw `ModelContext`, for the insert its `toEntity` does — so `SwiftDataItemCache`
+itself never touches `ModelContext` outside its own `init` (where it constructs `store` and
+hands the raw context off, immediately). `EntityMapper` (`Data/Mappers/EntityMapper.swift`,
+the protocol `ItemMapper` conforms to) lives in `Data/`, not `Domain/`, despite the
+generic-sounding name — its `associatedtype Entity: PersistentModel` makes it a
+persistence-framework-aware type by definition, the same reason `ItemCache`/
+`SwiftDataStore` live there too.
+
+Tested against a fake `ItemCache` (`AppTemplateTests/ItemRepositoryImplTests.swift`'s
+`InMemoryItemCache`) rather than a real `ModelContainer` — proof the abstraction actually
+decouples `ItemRepositoryImpl` from SwiftData, and the only way this template's own
+cache-fallback/upsert/pruneStale/pagination-safety logic gets to run in a fast, synchronous
+unit test at all.
 
 ## Architecture rules (enforced, not just documented)
 
@@ -764,7 +825,5 @@ already works off `URL.host`/`.pathComponents`, which mean the same thing for
 
 - **`AppError`** (`Domain/AppError.swift`) is the one error vocabulary every layer
   throws — network/persistence/validation/configuration — so ViewModels switch on one
-  type instead of learning what each dependency happens to throw.
-- **`EntityMapper`** (`Domain/Protocols/EntityMapper.swift`) is the one place that knows
-  both a DTO's shape and a persistence entity's shape; a renamed/reshaped API field only
-  requires editing the mapper, never every call site that touches `Item`.
+  type instead of learning what each dependency happens to throw. `EntityMapper` is the
+  DTO-shape/persistence-entity-shape equivalent — see "Persistence".

@@ -68,6 +68,11 @@ section for the full list and reasoning. The short version:
 - A new deep-link route is a new case in `NavigationCoordinator.handle(url:)` — never a
   second `.onOpenURL` elsewhere. See the README's "Deep linking" section for why that's
   also where universal links plug in later with no other code changing.
+- A repository that caches locally depends on a cache protocol (`ItemCache`), never
+  `ModelContext`/`@Model` types directly — follow `ItemRepositoryImpl`/`SwiftDataItemCache`
+  as the reference. See the README's "Persistence" section for why, and for
+  `SwiftDataStore<Entity: PersistentModel>`'s narrower job (removing SwiftData
+  boilerplate) versus `ItemCache`'s (making SwiftData itself swappable).
 
 ## Commits and PRs
 
