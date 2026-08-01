@@ -25,7 +25,7 @@ struct ItemDetailView: View {
                     Button {
                         coordinator.presentItemForm(.edit(item))
                     } label: {
-                        Label(AppStrings.edit, systemImage: "pencil")
+                        Label(AppStrings.edit, systemImage: Icons.edit)
                     }
                 }
             }

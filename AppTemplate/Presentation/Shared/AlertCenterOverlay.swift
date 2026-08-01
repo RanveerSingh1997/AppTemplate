@@ -190,7 +190,7 @@ private struct ToastView: View {
         AlertContent(
             title: "Delete Item?",
             message: "This can't be undone.",
-            icon: "exclamationmark.triangle.fill",
+            icon: Icons.warning,
             iconTint: .warning,
             buttons: [
                 AlertButtonConfig(title: AppStrings.cancel, role: .secondary, action: {}),
@@ -213,7 +213,7 @@ private struct ToastView: View {
     center.showToast(
         ToastContent(
             message: "Item Deleted",
-            icon: "checkmark.circle.fill",
+            icon: Icons.success,
             tint: .success,
             action: ToastContent.Action(title: "Undo", handler: {})
         )

@@ -29,7 +29,7 @@ struct SettingsView: View {
 private struct AboutView: View {
     var body: some View {
         VStack(spacing: Spacing.medium) {
-            Image(systemName: "app.badge.checkmark")
+            Image(systemName: Icons.aboutIcon)
                 .font(Typography.sectionIcon)
                 .foregroundStyle(Colors.accent)
             Text(AppStrings.appName)

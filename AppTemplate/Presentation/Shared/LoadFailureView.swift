@@ -2,13 +2,13 @@ import SwiftUI
 
 /// The shape every `ViewState.failed` case renders as — `HomeSplitView` and
 /// `ItemDetailView` both had their own identical `ContentUnavailableView(title,
-/// systemImage: "exclamationmark.triangle", description:)` call before this was extracted.
+/// systemImage: Icons.failure, description:)` call before this was extracted.
 struct LoadFailureView: View {
     let title: String
     let message: String
 
     var body: some View {
-        ContentUnavailableView(title, systemImage: "exclamationmark.triangle", description: Text(message))
+        ContentUnavailableView(title, systemImage: Icons.failure, description: Text(message))
     }
 }
 

@@ -38,7 +38,7 @@ struct HomeSplitView: View {
                         Button {
                             coordinator.presentItemForm(.create)
                         } label: {
-                            Label(AppStrings.addItem, systemImage: "plus")
+                            Label(AppStrings.addItem, systemImage: Icons.add)
                         }
                     }
                 }
@@ -51,7 +51,7 @@ struct HomeSplitView: View {
                 )
                 .id("\(id)-\(detailRefreshToken)")
             } else {
-                ContentUnavailableView(AppStrings.selectAnItem, systemImage: "sidebar.left")
+                ContentUnavailableView(AppStrings.selectAnItem, systemImage: Icons.noSelection)
             }
         }
         .sheet(item: $coordinator.presentedItemForm) { route in
@@ -85,7 +85,7 @@ struct HomeSplitView: View {
     @ViewBuilder
     private var emptyState: some View {
         if viewModel.searchText.isEmpty {
-            ContentUnavailableView(AppStrings.noItems, systemImage: "tray")
+            ContentUnavailableView(AppStrings.noItems, systemImage: Icons.emptyList)
         } else {
             ContentUnavailableView.search(text: viewModel.searchText)
         }
@@ -121,7 +121,7 @@ struct HomeSplitView: View {
                         }
                     }
                 } label: {
-                    Label(AppStrings.delete, systemImage: "trash")
+                    Label(AppStrings.delete, systemImage: Icons.delete)
                 }
                 .disabled(isDeleting)
             }

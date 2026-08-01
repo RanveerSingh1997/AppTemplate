@@ -11,7 +11,7 @@ struct SplashView: View {
 
     var body: some View {
         VStack(spacing: Spacing.large) {
-            Image(systemName: "app.fill")
+            Image(systemName: Icons.appIcon)
                 .font(Typography.heroIcon)
                 .foregroundStyle(Colors.accent)
             Text(AppStrings.appName)

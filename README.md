@@ -72,8 +72,9 @@ AppTemplate/
 │   │   │   ├── Spacing.swift                    # named spacing scale — small/medium/large
 │   │   │   ├── Colors.swift                      # named color tokens — see "Design tokens"
 │   │   │   ├── Typography.swift                   # named font tokens — see "Design tokens"
-│   │   │   └── AlertCenterOverlay.swift            # renders AlertCenter's alert/toast — see
-│   │   │                                            # "Alerts & toasts"
+│   │   │   ├── Icons.swift                         # named SF Symbol tokens — see "Design tokens"
+│   │   │   └── AlertCenterOverlay.swift             # renders AlertCenter's alert/toast — see
+│   │   │                                             # "Alerts & toasts"
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -181,8 +182,9 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    instead of a protocol (`no_concrete_impl_outside_composition_root` exempts `Mock*Impl`
    for exactly this) — a real `...Impl` still isn't allowed and still fails the build.
    Use `Spacing.small`/`.medium`/`.large` (`Presentation/Shared/Spacing.swift`) for any
-   `VStack`/`HStack` spacing, and `Colors`/`Typography` (`Presentation/Shared/`) for any
-   color/font, instead of a numeric/`Color`/`.font(...)` literal — see "Design tokens".
+   `VStack`/`HStack` spacing, and `Colors`/`Typography`/`Icons` (`Presentation/Shared/`) for
+   any color/font/SF Symbol, instead of a numeric/`Color`/`.font(...)`/`"symbol.name"`
+   literal — see "Design tokens".
 8. **Strings**: add a symbol to `Domain/AppStrings.swift` and a matching key to
    `Resources/Localizable.xcstrings` for any new UI text, then reference `AppStrings.xxx`
    at the call site — never a literal `"..."` passed straight to `Text`/`Button`/etc. See
@@ -453,11 +455,12 @@ code changes.
 
 ## Design tokens
 
-`Colors.swift`/`Typography.swift` (`Presentation/Shared/`) hold every color/font this
-template's chrome uses — same role as `Spacing.swift`: a named constant instead of a
-`.foregroundStyle(.red)`/`.font(.title.bold())` literal repeated at every call site.
-Rebranding (swap the accent color, change the type scale) means editing one of these two
-files, not grepping for every screen that happens to use `.title`.
+`Colors.swift`/`Typography.swift`/`Icons.swift` (`Presentation/Shared/`) hold every
+color/font/SF Symbol this template's chrome uses — same role as `Spacing.swift`: a named
+constant instead of a `.foregroundStyle(.red)`/`.font(.title.bold())`/`"trash"` literal
+repeated (or slightly misspelled between call sites) throughout the codebase. Rebranding
+(swap the accent color, change the type scale, swap an icon) means editing one of these
+three files, not grepping for every screen that happens to use `.title` or `"pencil"`.
 
 ```swift
 enum Colors {
@@ -476,17 +479,35 @@ enum Typography {
     static let body = Font.body
     static let caption = Font.caption
 }
+
+enum Icons {
+    static let appIcon = "app.fill"              // SplashView's hero icon
+    static let aboutIcon = "app.badge.checkmark"  // SettingsView's About icon
+    static let homeTab = "list.bullet"
+    static let settingsTab = "gearshape"
+    static let add = "plus"
+    static let edit = "pencil"
+    static let delete = "trash"
+    static let emptyList = "tray"
+    static let noSelection = "sidebar.left"
+    static let failure = "exclamationmark.triangle"      // LoadFailureView's icon
+    static let warning = "exclamationmark.triangle.fill"  // AlertContent's warning icon
+    static let success = "checkmark.circle.fill"           // ToastContent's success icon
+}
 ```
 
-Deliberately *not* here: a full 8-step type scale or a wide brand palette with nothing
-using most of it — every token above backs a real call site today (same reasoning as
-`Spacing`'s 3 sizes, not 8). Add a token when a new screen needs a genuinely different
-color/style, not speculatively.
+Deliberately *not* here: a full 8-step type scale, a wide brand palette, or an exhaustive
+icon catalog with nothing using most of it — every token above backs a real call site today
+(same reasoning as `Spacing`'s 3 sizes, not 8). Add a token when a new screen needs a
+genuinely different color/style/icon, not speculatively.
 
 `AlertCenterOverlay`'s `AlertTint -> Color` mapping reads from `Colors` too (`.destructive`
 -> `Colors.destructive`, etc.) — so an alert's "destructive" icon and a form's
 validation-error text (`AddEditItemView`'s `Text(message).foregroundStyle(Colors
 .destructive)`) always match, without either file hardcoding `.red` independently.
+`AlertContent`/`ToastContent`'s `icon: String?` field (`Domain/Services/AlertService.swift`)
+takes a plain SF Symbol name — pass `Icons.warning`/`.success`/etc. from a call site rather
+than a new string literal.
 
 ## Alerts & toasts
 
