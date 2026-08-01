@@ -21,10 +21,10 @@ struct AddEditItemView: View {
                     priorityPicker
                 }
                 if let message = viewModel.validationError?.errorDescription {
-                    Text(message).foregroundStyle(.red)
+                    Text(message).foregroundStyle(Colors.destructive)
                 }
                 if let message = viewModel.saveError?.errorDescription {
-                    Text(message).foregroundStyle(.red)
+                    Text(message).foregroundStyle(Colors.destructive)
                 }
             }
             .disabled(viewModel.isSaving)
@@ -67,7 +67,7 @@ struct AddEditItemView: View {
                 }
             }
         } failed: { message in
-            Text(message).foregroundStyle(.secondary)
+            Text(message).foregroundStyle(Colors.secondaryText)
         }
     }
 }

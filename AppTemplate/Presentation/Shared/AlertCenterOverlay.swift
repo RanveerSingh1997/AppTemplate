@@ -38,11 +38,11 @@ extension View {
 private extension AlertTint {
     var color: Color {
         switch self {
-        case .accent: return .accentColor
-        case .destructive: return .red
-        case .success: return .green
-        case .warning: return .orange
-        case .neutral: return .secondary
+        case .accent: return Colors.accent
+        case .destructive: return Colors.destructive
+        case .success: return Colors.success
+        case .warning: return Colors.warning
+        case .neutral: return Colors.secondaryText
         }
     }
 }

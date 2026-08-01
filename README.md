@@ -70,8 +70,10 @@ AppTemplate/
 │   │   │   ├── ViewStateView.swift             # shared ViewState<Value> switch — renders the
 │   │   │   │                                   # loading/failed/loaded-or-refreshing view for you
 │   │   │   ├── Spacing.swift                    # named spacing scale — small/medium/large
-│   │   │   └── AlertCenterOverlay.swift          # renders AlertCenter's alert/toast — see
-│   │   │                                          # "Alerts & toasts"
+│   │   │   ├── Colors.swift                      # named color tokens — see "Design tokens"
+│   │   │   ├── Typography.swift                   # named font tokens — see "Design tokens"
+│   │   │   └── AlertCenterOverlay.swift            # renders AlertCenter's alert/toast — see
+│   │   │                                            # "Alerts & toasts"
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -179,7 +181,8 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    instead of a protocol (`no_concrete_impl_outside_composition_root` exempts `Mock*Impl`
    for exactly this) — a real `...Impl` still isn't allowed and still fails the build.
    Use `Spacing.small`/`.medium`/`.large` (`Presentation/Shared/Spacing.swift`) for any
-   `VStack`/`HStack` spacing instead of a numeric literal.
+   `VStack`/`HStack` spacing, and `Colors`/`Typography` (`Presentation/Shared/`) for any
+   color/font, instead of a numeric/`Color`/`.font(...)` literal — see "Design tokens".
 8. **Strings**: add a symbol to `Domain/AppStrings.swift` and a matching key to
    `Resources/Localizable.xcstrings` for any new UI text, then reference `AppStrings.xxx`
    at the call site — never a literal `"..."` passed straight to `Text`/`Button`/etc. See
@@ -447,6 +450,43 @@ new string, rather than a `String(localized: "...")` literal inline at the call 
 language in Xcode (select the catalog, use the Editor menu or the "+" in the Inspector) and
 translate each entry's value when you actually need a second language; nothing else in the
 code changes.
+
+## Design tokens
+
+`Colors.swift`/`Typography.swift` (`Presentation/Shared/`) hold every color/font this
+template's chrome uses — same role as `Spacing.swift`: a named constant instead of a
+`.foregroundStyle(.red)`/`.font(.title.bold())` literal repeated at every call site.
+Rebranding (swap the accent color, change the type scale) means editing one of these two
+files, not grepping for every screen that happens to use `.title`.
+
+```swift
+enum Colors {
+    static let accent = Color.accentColor
+    static let destructive = Color.red
+    static let success = Color.green
+    static let warning = Color.orange
+    static let secondaryText = Color.secondary
+}
+
+enum Typography {
+    static let heroIcon = Font.system(size: 64)      // SplashView's app icon
+    static let sectionIcon = Font.system(size: 48)    // SettingsView's About icon
+    static let heading = Font.title.bold()            // SplashView, ItemDetailView
+    static let subheading = Font.title2.bold()        // SettingsView's About title
+    static let body = Font.body
+    static let caption = Font.caption
+}
+```
+
+Deliberately *not* here: a full 8-step type scale or a wide brand palette with nothing
+using most of it — every token above backs a real call site today (same reasoning as
+`Spacing`'s 3 sizes, not 8). Add a token when a new screen needs a genuinely different
+color/style, not speculatively.
+
+`AlertCenterOverlay`'s `AlertTint -> Color` mapping reads from `Colors` too (`.destructive`
+-> `Colors.destructive`, etc.) — so an alert's "destructive" icon and a form's
+validation-error text (`AddEditItemView`'s `Text(message).foregroundStyle(Colors
+.destructive)`) always match, without either file hardcoding `.red` independently.
 
 ## Alerts & toasts
 

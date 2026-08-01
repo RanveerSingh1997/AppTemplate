@@ -99,8 +99,8 @@ struct HomeSplitView: View {
                     Text(item.title)
                     if let priorityName = data.priorityName(for: item) {
                         Text(priorityName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(Typography.caption)
+                            .foregroundStyle(Colors.secondaryText)
                     }
                 }
                 if isDeleting {

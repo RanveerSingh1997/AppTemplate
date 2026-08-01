@@ -12,10 +12,10 @@ struct SplashView: View {
     var body: some View {
         VStack(spacing: Spacing.large) {
             Image(systemName: "app.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.tint)
+                .font(Typography.heroIcon)
+                .foregroundStyle(Colors.accent)
             Text(AppStrings.appName)
-                .font(.title.bold())
+                .font(Typography.heading)
         }
         .task {
             await viewModel.prepare()

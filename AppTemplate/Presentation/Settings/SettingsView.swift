@@ -30,13 +30,13 @@ private struct AboutView: View {
     var body: some View {
         VStack(spacing: Spacing.medium) {
             Image(systemName: "app.badge.checkmark")
-                .font(.system(size: 48))
-                .foregroundStyle(.tint)
+                .font(Typography.sectionIcon)
+                .foregroundStyle(Colors.accent)
             Text(AppStrings.appName)
-                .font(.title2.bold())
+                .font(Typography.subheading)
             Text(AppStrings.aboutDescription)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Colors.secondaryText)
                 .padding(.horizontal)
         }
         .navigationTitle(AppStrings.about)

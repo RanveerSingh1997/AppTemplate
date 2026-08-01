@@ -13,8 +13,8 @@ struct ItemDetailView: View {
         ViewStateView(state: viewModel.state, failureTitle: AppStrings.couldntLoadItem) { item in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.medium) {
-                    Text(item.title).font(.title.bold())
-                    Text(item.detail).font(.body)
+                    Text(item.title).font(Typography.heading)
+                    Text(item.detail).font(Typography.body)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
