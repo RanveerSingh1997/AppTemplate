@@ -46,6 +46,10 @@ section for the full list and reasoning. The short version:
 - Every user-facing string is an `AppStrings` symbol (`Domain/AppStrings.swift`) backed by
   a `Resources/Localizable.xcstrings` entry — never a literal passed straight to
   `Text`/`Button`/`AppError`/etc. See the README's "Localization" section.
+- A ViewModel that needs to show an alert or toast takes `AlertService` through its
+  initializer and calls `showAlert(title:message:)`/`showToast(_:)` — never its own
+  `@State` alert flag. See the README's "Alerts & toasts" section, including why the real
+  implementation is named `AlertCenter`, not `AlertServiceImpl`.
 
 ## Commits and PRs
 
@@ -53,7 +57,7 @@ section for the full list and reasoning. The short version:
   (the README's own commit history is a reasonable model: see `git log`).
 - Update the README alongside any change to the folder structure, architecture rules, or
   shared `Presentation/` types (`ViewState`, `FormMode`, `ViewStateView`,
-  `LoadFailureView`, `AppStrings`) — it's meant to stay accurate, not just be a first-day
-  snapshot.
+  `LoadFailureView`, `AppStrings`, `AlertCenterOverlay`) — it's meant to stay accurate, not
+  just be a first-day snapshot.
 - Run the "Before opening a PR" commands above; CI will re-run them regardless, but
   catching a lint/test failure locally is faster than round-tripping through CI.

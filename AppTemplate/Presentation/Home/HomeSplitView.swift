@@ -142,7 +142,11 @@ struct HomeSplitView: View {
     let itemRepository = MockItemRepositoryImpl()
     let priorityRepository = MockPriorityRepositoryImpl()
     return HomeSplitView(
-        viewModel: HomeViewModel(repository: itemRepository, priorityRepository: priorityRepository),
+        viewModel: HomeViewModel(
+            repository: itemRepository,
+            priorityRepository: priorityRepository,
+            alertService: NoOpAlertService()
+        ),
         coordinator: NavigationCoordinator(),
         makeDetailViewModel: { id in ItemDetailViewModel(itemID: id, repository: itemRepository) },
         makeFormViewModel: { route in
@@ -151,7 +155,12 @@ struct HomeSplitView: View {
             case .create: mode = .create
             case .edit(let item): mode = .edit(item)
             }
-            return AddEditItemViewModel(mode: mode, repository: itemRepository, priorityRepository: priorityRepository)
+            return AddEditItemViewModel(
+                mode: mode,
+                repository: itemRepository,
+                priorityRepository: priorityRepository,
+                alertService: NoOpAlertService()
+            )
         }
     )
 }

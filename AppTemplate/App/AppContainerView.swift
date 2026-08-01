@@ -21,15 +21,16 @@ struct AppContainerView: View {
             }
         }
         .alert(
-            "Couldn't Open Local Storage",
+            AppStrings.couldntOpenLocalStorage,
             isPresented: Binding(
                 get: { startupError != nil },
                 set: { if !$0 { startupError = nil } }
             )
         ) {
-            Button("OK", role: .cancel) { startupError = nil }
+            Button(AppStrings.ok, role: .cancel) { startupError = nil }
         } message: {
-            Text(startupError?.localizedDescription ?? "Using a temporary in-memory store for this session.")
+            Text(startupError?.localizedDescription ?? AppStrings.usingTemporaryInMemoryStore)
         }
+        .alertCenterOverlay(dependencies.alertCenter)
     }
 }

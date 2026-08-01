@@ -18,11 +18,13 @@ final class HomeViewModel {
 
     private let repository: ItemRepository
     private let priorityRepository: PriorityRepository
+    private let alertService: AlertService
     private var searchDebounceTask: Task<Void, Never>?
 
-    init(repository: ItemRepository, priorityRepository: PriorityRepository) {
+    init(repository: ItemRepository, priorityRepository: PriorityRepository, alertService: AlertService) {
         self.repository = repository
         self.priorityRepository = priorityRepository
+        self.alertService = alertService
     }
 
     func load() async {
@@ -70,10 +72,10 @@ final class HomeViewModel {
             try await repository.deleteItem(id: id)
             await load()
         } catch {
-            // `error.localizedDescription` already surfaces `AppError.errorDescription`
-            // (via `LocalizedError` bridging) for our own errors, and a reasonable system
-            // message for anything else — no `as AppError` branch needed to get that.
-            state = .failed(error.localizedDescription)
+            // An alert, not `state = .failed(...)` — the rest of the list loaded fine;
+            // only this one row's delete failed, so it should stay on screen underneath
+            // the alert instead of the whole list blanking to `LoadFailureView`.
+            alertService.showAlert(title: AppStrings.couldntDeleteItem, message: error.localizedDescription)
         }
     }
 }

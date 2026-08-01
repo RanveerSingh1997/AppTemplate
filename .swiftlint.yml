@@ -63,6 +63,7 @@ identifier_name:
     - vm
     - ui
     - qa
+    - ok
 
 # Enforced architecture rules (severity: error fails the SwiftLint build phase, so these
 # are gates, not suggestions — see README's "Architecture rules" section for the reasoning

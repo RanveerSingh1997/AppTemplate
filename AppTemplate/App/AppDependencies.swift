@@ -11,6 +11,10 @@ final class AppDependencies {
     let modelContainer: ModelContainer
     let startupError: AppError?
     let coordinator = NavigationCoordinator()
+    // Real in every environment, same as `coordinator` — there's no dev-time reason to
+    // fake an alert, only to render one. See `AlertCenter`'s doc comment for why it's
+    // exposed as this concrete type rather than through the `AlertService` protocol here.
+    let alertCenter = AlertCenter()
 
     // Cross-cutting seams: built and available via AppDependencies, but not yet consumed
     // by any feature. Wire one in (pass it into a repository's init, same as `apiClient`)
@@ -88,7 +92,7 @@ final class AppDependencies {
     }
 
     func makeHomeViewModel() -> HomeViewModel {
-        HomeViewModel(repository: itemRepository, priorityRepository: priorityRepository)
+        HomeViewModel(repository: itemRepository, priorityRepository: priorityRepository, alertService: alertCenter)
     }
 
     func makeItemDetailViewModel(itemID: String) -> ItemDetailViewModel {
@@ -105,6 +109,11 @@ final class AppDependencies {
         case .create: mode = .create
         case .edit(let item): mode = .edit(item)
         }
-        return AddEditItemViewModel(mode: mode, repository: itemRepository, priorityRepository: priorityRepository)
+        return AddEditItemViewModel(
+            mode: mode,
+            repository: itemRepository,
+            priorityRepository: priorityRepository,
+            alertService: alertCenter
+        )
     }
 }

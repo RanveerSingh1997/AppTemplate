@@ -50,6 +50,14 @@ enum AppStrings {
 
     static let home = String(localized: "Home")
 
+    // MARK: - Alerts / toasts
+
+    static let ok = String(localized: "OK")
+    static let couldntOpenLocalStorage = String(localized: "Couldn't Open Local Storage")
+    static let usingTemporaryInMemoryStore = String(localized: "Using a temporary in-memory store for this session.")
+    static let itemSaved = String(localized: "Item Saved")
+    static let couldntDeleteItem = String(localized: "Couldn't Delete Item")
+
     // MARK: - AppError messages
 
     static let invalidRequestURL = String(localized: "The request URL is invalid.")

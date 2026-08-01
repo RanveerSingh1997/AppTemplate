@@ -1,14 +1,33 @@
 @testable import AppTemplate
 import Testing
 
+/// Records calls instead of discarding them like `NoOpAlertService` — lets a test assert
+/// a toast was actually shown, not just that the ViewModel didn't crash.
+@MainActor
+private final class SpyAlertService: AlertService {
+    private(set) var toastMessages: [String] = []
+
+    func showAlert(_ alert: AlertContent) {}
+
+    func showToast(_ toast: ToastContent) {
+        toastMessages.append(toast.message)
+    }
+}
+
 @MainActor
 struct AddEditItemViewModelTests {
     private func makeViewModel(
         mode: FormMode<Item>,
         repository: ItemRepository = MockItemRepositoryImpl(),
-        priorityRepository: PriorityRepository = MockPriorityRepositoryImpl()
+        priorityRepository: PriorityRepository = MockPriorityRepositoryImpl(),
+        alertService: AlertService? = nil
     ) -> AddEditItemViewModel {
-        AddEditItemViewModel(mode: mode, repository: repository, priorityRepository: priorityRepository)
+        AddEditItemViewModel(
+            mode: mode,
+            repository: repository,
+            priorityRepository: priorityRepository,
+            alertService: alertService ?? NoOpAlertService()
+        )
     }
 
     @Test
@@ -26,7 +45,8 @@ struct AddEditItemViewModelTests {
     @Test
     func saveCreatesItemWhenValid() async {
         let repository = MockItemRepositoryImpl()
-        let viewModel = makeViewModel(mode: .create, repository: repository)
+        let alertService = SpyAlertService()
+        let viewModel = makeViewModel(mode: .create, repository: repository, alertService: alertService)
         viewModel.title = "Valid Title"
         viewModel.detail = "Valid detail"
 
@@ -34,6 +54,7 @@ struct AddEditItemViewModelTests {
 
         #expect(saved?.title == "Valid Title")
         #expect(viewModel.validationError == nil)
+        #expect(alertService.toastMessages == [AppStrings.itemSaved])
     }
 
     @Test

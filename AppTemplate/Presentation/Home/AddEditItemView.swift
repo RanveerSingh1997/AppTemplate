@@ -77,7 +77,8 @@ struct AddEditItemView: View {
         viewModel: AddEditItemViewModel(
             mode: .create,
             repository: MockItemRepositoryImpl(),
-            priorityRepository: MockPriorityRepositoryImpl()
+            priorityRepository: MockPriorityRepositoryImpl(),
+            alertService: NoOpAlertService()
         ),
         onSaved: { _ in }
     )
@@ -88,7 +89,8 @@ struct AddEditItemView: View {
         viewModel: AddEditItemViewModel(
             mode: .edit(MockItemRepositoryImpl.sampleItems[0]),
             repository: MockItemRepositoryImpl(),
-            priorityRepository: MockPriorityRepositoryImpl()
+            priorityRepository: MockPriorityRepositoryImpl(),
+            alertService: NoOpAlertService()
         ),
         onSaved: { _ in }
     )

@@ -38,7 +38,8 @@ AppTemplate/
 │   │   ├── Config/                    # AppEnvironment, AppConfiguration (reads xcconfig values)
 │   │   ├── Coordinator/                # NavigationCoordinator, AppRoute, ItemFormRoute
 │   │   └── Services/
-│   │       ├── Impl/                   # real implementations (Keychain, NWPathMonitor, console)
+│   │       ├── Impl/                   # real implementations (Keychain, NWPathMonitor, console,
+│   │       │                           # AlertCenter — see "Alerts & toasts" for its naming)
 │   │       └── Mocks/                   # in-memory/no-op stand-ins used in Dev
 │   │
 │   ├── Domain/                  # protocols + models only — imports just Foundation, no
@@ -50,7 +51,8 @@ AppTemplate/
 │   │   ├── Models/                      # Item, Priority — domain-facing shapes
 │   │   ├── Protocols/                   # EntityMapper, LocalTimestamped
 │   │   ├── Repositories/                 # ItemRepository, PriorityRepository (protocols)
-│   │   └── Services/                     # SecureStorageService, ReachabilityService, EventLogger
+│   │   └── Services/                     # SecureStorageService, ReachabilityService,
+│   │                                      # EventLogger, AlertService
 │   │
 │   ├── Data/                     # concrete implementations of Domain's protocols
 │   │   ├── DTOs/                        # ItemDTO, PriorityDTO — network shapes
@@ -67,7 +69,9 @@ AppTemplate/
 │   │   │   ├── LoadFailureView.swift           # shared ViewState.failed rendering
 │   │   │   ├── ViewStateView.swift             # shared ViewState<Value> switch — renders the
 │   │   │   │                                   # loading/failed/loaded-or-refreshing view for you
-│   │   │   └── Spacing.swift                    # named spacing scale — small/medium/large
+│   │   │   ├── Spacing.swift                    # named spacing scale — small/medium/large
+│   │   │   └── AlertCenterOverlay.swift          # renders AlertCenter's alert/toast — see
+│   │   │                                          # "Alerts & toasts"
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -199,6 +203,10 @@ because most real apps need them soon — but nothing in the app calls them yet.
 uses it to log every request's method/path/status/duration. `ConsoleEventLogger` (prints
 to stdout) is the only implementation, though; swap it for a real analytics/crash-reporting
 SDK's logger later without touching `LoggingInterceptor` or any other call site.
+
+`AlertService` (`Domain/Services/AlertService.swift`) *is* wired in too — `HomeViewModel`
+shows an alert on a failed delete, `AddEditItemViewModel` shows a toast on a successful
+save. See "Alerts & toasts" below for the full pattern.
 
 These are intentionally untested beyond compiling — a test that only proves the mock
 returns what you told it to return isn't real coverage. Test them once something depends
@@ -439,6 +447,84 @@ new string, rather than a `String(localized: "...")` literal inline at the call 
 language in Xcode (select the catalog, use the Editor menu or the "+" in the Inspector) and
 translate each entry's value when you actually need a second language; nothing else in the
 code changes.
+
+## Alerts & toasts
+
+`AlertService.showAlert`/`.showToast` render a custom dialog and bottom banner — not native
+`.alert(...)`, which can't show an icon, can't align the message, and can't give a button
+its own color/prominence. Inject `AlertService` through the initializer, same as
+`ItemRepository`, and call the plain-string convenience form for the common case:
+
+```swift
+init(repository: ItemRepository, alertService: AlertService) { ... }
+...
+alertService.showAlert(title: AppStrings.couldntDeleteItem, message: error.localizedDescription)
+alertService.showToast(AppStrings.itemSaved)
+```
+
+Reach for `AlertContent`/`ToastContent` (`Domain/Services/AlertService.swift`) directly when
+you need more than that — an icon, extra buttons, a toast action:
+
+```swift
+alertService.showAlert(
+    AlertContent(
+        title: AppStrings.delete,
+        message: "This can't be undone.",
+        icon: "exclamationmark.triangle.fill",
+        iconTint: .warning,
+        buttons: [
+            AlertButtonConfig(title: AppStrings.cancel, role: .secondary, action: {}),
+            AlertButtonConfig(title: AppStrings.delete, role: .destructive, action: { viewModel.confirmDelete() })
+        ]
+    )
+)
+
+alertService.showToast(
+    ToastContent(message: "Item Deleted", icon: "checkmark.circle.fill", tint: .success,
+                 action: .init(title: "Undo", handler: { viewModel.undoDelete() }))
+)
+```
+
+- `AlertButtonRole` (`.primary`/`.secondary`/`.destructive`) controls a button's visual
+  weight and color — `.automatic` `buttonLayout` stacks vertically once there are more than
+  2 buttons, matching native `.alert`'s own behavior; pass `.horizontal`/`.vertical` to
+  override that for one alert.
+- `AlertTint` (`.accent`/`.destructive`/`.success`/`.warning`/`.neutral`) is the "theme
+  color" knob for an icon or toast — a bounded set of semantic choices, not an arbitrary
+  `Color`, so it stays Domain-safe (see below) instead of turning into a full design-token
+  system nobody asked for.
+- `AlertTextAlignment` (`.leading`/`.center`/`.trailing`) controls the alert's title/message
+  alignment.
+- A toast's `duration` (default 2.5s) and `action` (a second, non-dismiss button) are both
+  optional `ToastContent` fields.
+
+`AppDependencies.makeHomeViewModel()`/`makeAddEditItemViewModel()` pass its own
+`alertCenter`; a test passes `NoOpAlertService()` (discards both calls) or a small spy that
+records them — see `HomeViewModelTests.deleteFailureShowsAnAlertAndKeepsTheListLoaded()` for
+the pattern.
+
+**Why `AlertContent`/`ToastContent` use `AlertTint`, not `Color`.** Domain imports only
+`Foundation` (Architecture rule #4) — a `SwiftUI.Color`/`TextAlignment` field on a Domain
+protocol's parameter type would break that. `AlertCenterOverlay` (Presentation) is the one
+place that maps `AlertTint`/`AlertTextAlignment` to real SwiftUI values; everything upstream
+of it, including the whole `AlertService` file, stays SwiftUI-free.
+
+**Why the real implementation isn't `AlertServiceImpl`.** Every other service in this
+template (`ReachabilityService`, `SecureStorageService`) has a real/mock split that varies
+*by environment* — Dev gets a fake for convenience, QA/Prod get the real thing. Alerts don't
+work that way: there's no dev-time reason to fake one, only to render it, so
+`AppDependencies.alertCenter` is a single concrete `AlertCenter` instance used in every
+environment — the same pattern as `NavigationCoordinator`, not `ReachabilityServiceImpl`.
+`AlertCenter` is `@Observable`, and `AppContainerView` binds to it directly (via
+`.alertCenterOverlay(_:)`) to render `activeAlert`/`activeToast` — the same reason
+`HomeSplitView` binds to `NavigationCoordinator` directly instead of a protocol. Naming it
+`AlertCenter` instead of `AlertServiceImpl` is deliberate, not just stylistic: the
+`no_concrete_impl_outside_composition_root` rule (see "Architecture rules" below) would
+otherwise fail the build on `Presentation/Shared/AlertCenterOverlay.swift` referencing it —
+correctly so for a real `...RepositoryImpl`/`...ServiceImpl`, but wrong for presentation
+state a root view is meant to own. Everywhere else, inject and call the `AlertService`
+protocol — only `AppContainerView` (the app shell, composition-root-adjacent) and
+`AlertCenterOverlay` itself touch `AlertCenter` concretely.
 
 ## Architecture notes
 

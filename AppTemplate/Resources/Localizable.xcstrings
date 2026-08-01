@@ -89,6 +89,17 @@
         }
       }
     },
+    "Couldn't Delete Item" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't Delete Item"
+          }
+        }
+      }
+    },
     "Couldn't Load Item" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -107,6 +118,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't Load Items"
+          }
+        }
+      }
+    },
+    "Couldn't Open Local Storage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't Open Local Storage"
           }
         }
       }
@@ -210,6 +232,17 @@
         }
       }
     },
+    "Item Saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item Saved"
+          }
+        }
+      }
+    },
     "Items" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -261,6 +294,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "None"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         }
       }
@@ -371,6 +415,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Title"
+          }
+        }
+      }
+    },
+    "Using a temporary in-memory store for this session." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Using a temporary in-memory store for this session."
           }
         }
       }

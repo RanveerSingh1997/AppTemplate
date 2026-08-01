@@ -1,13 +1,34 @@
 @testable import AppTemplate
 import Testing
 
+/// Records calls instead of discarding them like `NoOpAlertService` — lets a test assert
+/// an alert was actually shown, not just that the ViewModel didn't crash.
+@MainActor
+private final class SpyAlertService: AlertService {
+    private(set) var alertTitles: [String] = []
+    private(set) var toastMessages: [String] = []
+
+    func showAlert(_ alert: AlertContent) {
+        alertTitles.append(alert.title)
+    }
+
+    func showToast(_ toast: ToastContent) {
+        toastMessages.append(toast.message)
+    }
+}
+
 @MainActor
 struct HomeViewModelTests {
     private func makeViewModel(
         repository: ItemRepository = MockItemRepositoryImpl(),
-        priorityRepository: PriorityRepository = MockPriorityRepositoryImpl()
+        priorityRepository: PriorityRepository = MockPriorityRepositoryImpl(),
+        alertService: AlertService? = nil
     ) -> HomeViewModel {
-        HomeViewModel(repository: repository, priorityRepository: priorityRepository)
+        HomeViewModel(
+            repository: repository,
+            priorityRepository: priorityRepository,
+            alertService: alertService ?? NoOpAlertService()
+        )
     }
 
     @Test
@@ -111,6 +132,24 @@ struct HomeViewModelTests {
             return
         }
         #expect(!data.items.contains { $0.id == "1" })
+    }
+
+    @Test
+    func deleteFailureShowsAnAlertAndKeepsTheListLoaded() async {
+        let repository = MockItemRepositoryImpl(deleteError: AppError.network(.noConnection))
+        let alertService = SpyAlertService()
+        let viewModel = makeViewModel(repository: repository, alertService: alertService)
+        await viewModel.load()
+
+        await viewModel.delete(id: "1")
+
+        // A failed delete is an alert, not a blown-away list — the rest of the items
+        // loaded fine and should still be visible underneath the alert.
+        guard case .loaded = viewModel.state else {
+            Issue.record("Expected list to remain .loaded after a failed delete, got \(viewModel.state)")
+            return
+        }
+        #expect(alertService.alertTitles == [AppStrings.couldntDeleteItem])
     }
 
     @Test

@@ -19,11 +19,18 @@ final class AddEditItemViewModel {
     private let mode: FormMode<Item>
     private let repository: ItemRepository
     private let priorityRepository: PriorityRepository
+    private let alertService: AlertService
 
-    init(mode: FormMode<Item>, repository: ItemRepository, priorityRepository: PriorityRepository) {
+    init(
+        mode: FormMode<Item>,
+        repository: ItemRepository,
+        priorityRepository: PriorityRepository,
+        alertService: AlertService
+    ) {
         self.mode = mode
         self.repository = repository
         self.priorityRepository = priorityRepository
+        self.alertService = alertService
         switch mode {
         case .create:
             title = ""
@@ -69,18 +76,21 @@ final class AddEditItemViewModel {
         isSaving = true
         defer { isSaving = false }
         do {
+            let saved: Item
             switch mode {
             case .create:
-                return try await repository.createItem(
+                saved = try await repository.createItem(
                     title: trimmedTitle,
                     detail: detail,
                     priorityID: selectedPriorityID
                 )
             case .edit(let item):
-                return try await repository.updateItem(
+                saved = try await repository.updateItem(
                     Item(id: item.id, title: trimmedTitle, detail: detail, priorityID: selectedPriorityID)
                 )
             }
+            alertService.showToast(AppStrings.itemSaved)
+            return saved
         } catch {
             saveError = .from(error)
             return nil

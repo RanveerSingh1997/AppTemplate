@@ -9,10 +9,18 @@ final class MockItemRepositoryImpl: ItemRepository {
     /// observe a ViewModel's mid-flight state (e.g. `ViewState.refreshing` before the fetch
     /// completes) set this instead of racing real task scheduling.
     private let artificialDelay: Duration
+    /// Set in tests that need `deleteItem` to fail deterministically — nil (never throws)
+    /// for normal dev use.
+    private let deleteError: Error?
 
-    init(items: [Item] = MockItemRepositoryImpl.sampleItems, artificialDelay: Duration = .zero) {
+    init(
+        items: [Item] = MockItemRepositoryImpl.sampleItems,
+        artificialDelay: Duration = .zero,
+        deleteError: Error? = nil
+    ) {
         self.items = items
         self.artificialDelay = artificialDelay
+        self.deleteError = deleteError
     }
 
     func fetchItems(search: String?) async throws -> [Item] {
@@ -45,6 +53,7 @@ final class MockItemRepositoryImpl: ItemRepository {
         if artificialDelay > .zero {
             try? await Task.sleep(for: artificialDelay)
         }
+        if let deleteError { throw deleteError }
         items.removeAll { $0.id == id }
     }
 
