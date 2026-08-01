@@ -73,8 +73,13 @@ AppTemplate/
 │   │   │   ├── Colors.swift                      # named color tokens — see "Design tokens"
 │   │   │   ├── Typography.swift                   # named font tokens — see "Design tokens"
 │   │   │   ├── Icons.swift                         # named SF Symbol tokens — see "Design tokens"
-│   │   │   └── AlertCenterOverlay.swift             # renders AlertCenter's alert/toast — see
-│   │   │                                             # "Alerts & toasts"
+│   │   │   ├── ValidatedTextField.swift             # TextField + inline error — see
+│   │   │   │                                        # "Reusable form components"
+│   │   │   ├── ButtonStyles.swift                    # .primary/.secondary/.destructive
+│   │   │   │                                         # button styles — see "Reusable form
+│   │   │   │                                         # components"
+│   │   │   └── AlertCenterOverlay.swift               # renders AlertCenter's alert/toast — see
+│   │   │                                               # "Alerts & toasts"
 │   │   ├── Splash/
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
@@ -184,7 +189,10 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    Use `Spacing.small`/`.medium`/`.large` (`Presentation/Shared/Spacing.swift`) for any
    `VStack`/`HStack` spacing, and `Colors`/`Typography`/`Icons` (`Presentation/Shared/`) for
    any color/font/SF Symbol, instead of a numeric/`Color`/`.font(...)`/`"symbol.name"`
-   literal — see "Design tokens".
+   literal — see "Design tokens". Use `ValidatedTextField` and
+   `.buttonStyle(.primary/.secondary/.destructive)` (`Presentation/Shared/`) for any text
+   field with an error message or any button, instead of hand-rolling either — see
+   "Reusable form components".
 8. **Strings**: add a symbol to `Domain/AppStrings.swift` and a matching key to
    `Resources/Localizable.xcstrings` for any new UI text, then reference `AppStrings.xxx`
    at the call site — never a literal `"..."` passed straight to `Text`/`Button`/etc. See
@@ -508,6 +516,39 @@ validation-error text (`AddEditItemView`'s `Text(message).foregroundStyle(Colors
 `AlertContent`/`ToastContent`'s `icon: String?` field (`Domain/Services/AlertService.swift`)
 takes a plain SF Symbol name — pass `Icons.warning`/`.success`/etc. from a call site rather
 than a new string literal.
+
+## Reusable form components
+
+`ValidatedTextField` and `.buttonStyle(.primary/.secondary/.destructive)`
+(`Presentation/Shared/`) are the two pieces `AddEditItemView` used to hand-roll — a bare
+`TextField` with a form-wide error `Text` below the *whole* form (not scoped to the field it
+was actually about), and ad hoc `.tint(...)`/`.fontWeight(...)` styling repeated at every
+button call site. Reach for these on the next form instead of repeating either pattern:
+
+```swift
+ValidatedTextField(
+    title: AppStrings.title,
+    text: $viewModel.title,
+    errorMessage: viewModel.validationError?.errorDescription
+)
+// axis: .vertical for a multi-line field (AddEditItemView's Detail field), same as TextField's own parameter
+
+Button(AppStrings.save, action: save).buttonStyle(.primary)
+Button(AppStrings.cancel, action: dismiss).buttonStyle(.secondary)
+Button(AppStrings.delete, action: delete).buttonStyle(.destructive)
+```
+
+Both are built from `Colors`/`Typography`/`Spacing` (not their own literals), and
+`AlertCenterOverlay`'s alert buttons use the same three `ButtonStyle`s — `AlertButtonRole`
+(`.primary`/`.secondary`/`.destructive`, `Domain/Services/AlertService.swift`) maps directly
+to `.buttonStyle(.primary/.secondary/.destructive)`, so an alert's buttons and a form's
+buttons share one visual vocabulary instead of two independently-styled ones.
+
+Deliberately *not* here: a full form-builder DSL, per-field validation rules, or a generic
+`FormField<Value>` covering every input type (picker, toggle, date) — `ValidatedTextField`
+covers exactly the shape `AddEditItemView` needed (`TextField` + inline error). Add a
+sibling component (`ValidatedPicker`, `ValidatedToggle`, ...) when a real screen needs one,
+following the same shape, rather than generalizing ahead of an actual second use.
 
 ## Alerts & toasts
 

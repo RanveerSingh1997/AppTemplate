@@ -113,24 +113,21 @@ private struct AlertDialogView: View {
     @ViewBuilder
     private var buttons: some View {
         ForEach(alert.buttons) { button in
-            Button(button.title) {
-                button.action()
-                onDismiss()
-            }
-            .buttonStyle(.bordered)
-            .tint(button.role == .secondary ? .primary : button.role.tint.color)
-            .fontWeight(button.role == .primary ? .semibold : .regular)
-            .frame(maxWidth: isVertical ? .infinity : nil)
+            styledButton(button)
         }
     }
-}
 
-private extension AlertButtonRole {
-    var tint: AlertTint {
-        switch self {
-        case .primary: return .accent
-        case .secondary: return .neutral
-        case .destructive: return .destructive
+    /// Reuses `PrimaryButtonStyle`/`SecondaryButtonStyle`/`DestructiveButtonStyle`
+    /// (`Presentation/Shared/ButtonStyles.swift`) — the same three styles a form's own
+    /// Save/Delete buttons reach for, so an alert's buttons and a screen's buttons always
+    /// look like they belong to the same app.
+    @ViewBuilder
+    private func styledButton(_ button: AlertButtonConfig) -> some View {
+        let action = { button.action(); onDismiss() }
+        switch button.role {
+        case .primary: Button(button.title, action: action).buttonStyle(.primary)
+        case .secondary: Button(button.title, action: action).buttonStyle(.secondary)
+        case .destructive: Button(button.title, action: action).buttonStyle(.destructive)
         }
     }
 }

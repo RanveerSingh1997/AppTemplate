@@ -14,17 +14,20 @@ struct AddEditItemView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField(AppStrings.title, text: $viewModel.title)
-                    TextField(AppStrings.detail, text: $viewModel.detail, axis: .vertical)
+                    ValidatedTextField(
+                        title: AppStrings.title,
+                        text: $viewModel.title,
+                        errorMessage: viewModel.validationError?.errorDescription
+                    )
+                    ValidatedTextField(title: AppStrings.detail, text: $viewModel.detail, axis: .vertical)
                 }
                 Section(AppStrings.priority) {
                     priorityPicker
                 }
-                if let message = viewModel.validationError?.errorDescription {
-                    Text(message).foregroundStyle(Colors.destructive)
-                }
                 if let message = viewModel.saveError?.errorDescription {
-                    Text(message).foregroundStyle(Colors.destructive)
+                    Text(message)
+                        .font(Typography.caption)
+                        .foregroundStyle(Colors.destructive)
                 }
             }
             .disabled(viewModel.isSaving)
