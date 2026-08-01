@@ -57,7 +57,7 @@ AppTemplate/
 │   │   ├── Protocols/                   # EntityMapper, LocalTimestamped
 │   │   ├── Repositories/                 # ItemRepository, PriorityRepository, AuthRepository
 │   │   └── Services/                     # SecureStorageService, ReachabilityService,
-│   │                                      # EventLogger, AlertService
+│   │                                      # EventLogger, AlertService, FeatureFlagService
 │   │
 │   ├── Data/                     # concrete implementations of Domain's protocols
 │   │   ├── DTOs/                        # ItemDTO, PriorityDTO, AuthDTOs — network shapes
@@ -212,12 +212,21 @@ because most real apps need them soon — but nothing in the app calls them yet.
 (pass it into a new/existing type's initializer, the same way `apiClient` is passed to
 `ItemRepositoryImpl`) when a concrete feature needs it; don't reach for `.shared` instead.
 
-- **`SecureStorageService`** (`Domain/Services/SecureStorageService.swift`) — Keychain-
-  backed token/credential storage. Already read by `AuthHeaderInterceptor` (see below);
-  an auth feature just needs to *write* to it after login — nothing else to wire up.
 - **`ReachabilityService`** (`Domain/Services/ReachabilityService.swift`) — connectivity
   check via `NWPathMonitor`. Plug into a repository (check before a network call) or an
   offline banner.
+- **`FeatureFlagService`** (`Domain/Services/FeatureFlagService.swift`) —
+  `isEnabled(_ flag: FeatureFlag) -> Bool`. `UserDefaultsFeatureFlagService` (real) checks
+  a per-environment default, then lets a `UserDefaults` override (e.g. from a future debug
+  menu) win — no backend needed. `FeatureFlag.exampleFeature` is a placeholder case;
+  replace it with your own as real features need gating, the same way `Item` is a
+  placeholder domain model (see "Making it your app").
+
+`SecureStorageService` (`Domain/Services/SecureStorageService.swift`) *is* wired in —
+`AuthHeaderInterceptor` reads it on every request, `AuthSessionStore` writes to it on
+login/logout (see "Authentication"). `KeychainSecureStorageService` is the only real
+implementation; nothing about that call site changes if you swap it for a different
+secure-storage mechanism.
 
 `EventLogger` (`Domain/Services/EventLogger.swift`) *is* wired in — `LoggingInterceptor`
 uses it to log every request's method/path/status/duration. `ConsoleEventLogger` (prints

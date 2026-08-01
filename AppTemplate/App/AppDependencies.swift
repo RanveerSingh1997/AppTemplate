@@ -19,12 +19,16 @@ final class AppDependencies {
     // concern. Constructed after the `switch` below, once `secureStorageService` exists.
     let authSessionStore: AuthSessionStore
 
-    // Cross-cutting seams: built and available via AppDependencies, but not yet consumed
-    // by any feature. Wire one in (pass it into a repository's init, same as `apiClient`)
-    // when a concrete feature needs it — don't reach for `.shared` instead.
+    // Cross-cutting seams, built and available via AppDependencies whether or not a
+    // feature consumes them yet — see README's "What's built but not yet wired in".
+    // `secureStorageService`/`logger` already are (AuthHeaderInterceptor/AuthSessionStore,
+    // LoggingInterceptor); `reachabilityService`/`featureFlagService` aren't yet. Wire one
+    // in the same way `apiClient` is passed to `ItemRepositoryImpl` — don't reach for
+    // `.shared` instead.
     let secureStorageService: SecureStorageService
     let reachabilityService: ReachabilityService
     let logger: EventLogger
+    let featureFlagService: FeatureFlagService
 
     private let itemRepository: ItemRepository
     private let priorityRepository: PriorityRepository
@@ -49,6 +53,7 @@ final class AppDependencies {
             secureStorageService = InMemorySecureStorageService()
             reachabilityService = MockReachabilityService()
             logger = ConsoleEventLogger()
+            featureFlagService = MockFeatureFlagService()
         case .qa, .prod:
             let baseURL = (try? AppConfiguration.apiBaseURL()) ?? AppDependencies.fallbackBaseURL
             let secureStorage = KeychainSecureStorageService()
@@ -88,6 +93,7 @@ final class AppDependencies {
             priorityRepository = PriorityRepositoryImpl(apiClient: apiClient)
             authRepository = AuthRepositoryImpl(apiClient: apiClient)
             reachabilityService = ReachabilityServiceImpl()
+            featureFlagService = UserDefaultsFeatureFlagService()
         }
 
         authSessionStore = AuthSessionStore(secureStorageService: secureStorageService)
