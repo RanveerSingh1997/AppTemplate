@@ -38,8 +38,8 @@ final class AddEditItemViewModel {
 
     var navigationTitle: String {
         switch mode {
-        case .create: return "New Item"
-        case .edit: return "Edit Item"
+        case .create: return AppStrings.newItem
+        case .edit: return AppStrings.editItem
         }
     }
 
@@ -57,11 +57,11 @@ final class AddEditItemViewModel {
     func save() async -> Item? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else {
-            validationError = .validation(.emptyField("Title"))
+            validationError = .validation(.emptyField(AppStrings.title))
             return nil
         }
         guard trimmedTitle.count <= 80 else {
-            validationError = .validation(.tooLong(field: "Title", max: 80))
+            validationError = .validation(.tooLong(field: AppStrings.title, max: 80))
             return nil
         }
         validationError = nil

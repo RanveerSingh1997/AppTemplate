@@ -14,7 +14,7 @@ struct SplashView: View {
             Image(systemName: "app.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(.tint)
-            Text("AppTemplate")
+            Text(AppStrings.appName)
                 .font(.title.bold())
         }
         .task {

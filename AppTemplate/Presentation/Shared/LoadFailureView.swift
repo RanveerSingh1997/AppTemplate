@@ -13,5 +13,8 @@ struct LoadFailureView: View {
 }
 
 #Preview {
-    LoadFailureView(title: "Couldn't Load Items", message: "The network connection appears to be offline.")
+    // The message here is preview-only (never shown for real — AppError.errorDescription
+    // supplies the real message), so it's not in Localizable.xcstrings; the title reuses
+    // the real AppStrings key since HomeSplitView passes this exact one.
+    LoadFailureView(title: AppStrings.couldntLoadItems, message: "The network connection appears to be offline.")
 }

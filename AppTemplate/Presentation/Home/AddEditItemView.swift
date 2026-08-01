@@ -14,10 +14,10 @@ struct AddEditItemView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Title", text: $viewModel.title)
-                    TextField("Detail", text: $viewModel.detail, axis: .vertical)
+                    TextField(AppStrings.title, text: $viewModel.title)
+                    TextField(AppStrings.detail, text: $viewModel.detail, axis: .vertical)
                 }
-                Section("Priority") {
+                Section(AppStrings.priority) {
                     priorityPicker
                 }
                 if let message = viewModel.validationError?.errorDescription {
@@ -31,14 +31,14 @@ struct AddEditItemView: View {
             .navigationTitle(viewModel.navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(AppStrings.cancel) { dismiss() }
                         .disabled(viewModel.isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if viewModel.isSaving {
                         ProgressView()
                     } else {
-                        Button("Save") {
+                        Button(AppStrings.save) {
                             Task {
                                 if let saved = await viewModel.save() {
                                     onSaved(saved)
@@ -60,8 +60,8 @@ struct AddEditItemView: View {
 
     private var priorityPicker: some View {
         ViewStateView(state: viewModel.priorityOptions) { priorities in
-            Picker("Priority", selection: $viewModel.selectedPriorityID) {
-                Text("None").tag(String?.none)
+            Picker(AppStrings.priority, selection: $viewModel.selectedPriorityID) {
+                Text(AppStrings.none).tag(String?.none)
                 ForEach(priorities) { priority in
                     Text(priority.name).tag(Optional(priority.id))
                 }

@@ -28,8 +28,8 @@ struct HomeSplitView: View {
     var body: some View {
         NavigationSplitView {
             sidebar
-                .navigationTitle("Items")
-                .searchable(text: $viewModel.searchText, prompt: "Search items")
+                .navigationTitle(AppStrings.items)
+                .searchable(text: $viewModel.searchText, prompt: AppStrings.searchItems)
                 .onChange(of: viewModel.searchText) { _, _ in
                     viewModel.searchTextDidChange()
                 }
@@ -38,7 +38,7 @@ struct HomeSplitView: View {
                         Button {
                             coordinator.presentItemForm(.create)
                         } label: {
-                            Label("Add Item", systemImage: "plus")
+                            Label(AppStrings.addItem, systemImage: "plus")
                         }
                     }
                 }
@@ -51,7 +51,7 @@ struct HomeSplitView: View {
                 )
                 .id("\(id)-\(detailRefreshToken)")
             } else {
-                ContentUnavailableView("Select an Item", systemImage: "sidebar.left")
+                ContentUnavailableView(AppStrings.selectAnItem, systemImage: "sidebar.left")
             }
         }
         .sheet(item: $coordinator.presentedItemForm) { route in
@@ -69,7 +69,7 @@ struct HomeSplitView: View {
         // screen while a new fetch is in flight (search, delete-then-reload) instead of
         // blanking to a spinner; the toolbar's ProgressView (below) is the only visible
         // difference.
-        ViewStateView(state: viewModel.state, failureTitle: "Couldn't Load Items") { data in
+        ViewStateView(state: viewModel.state, failureTitle: AppStrings.couldntLoadItems) { data in
             if data.items.isEmpty {
                 emptyState
             } else {
@@ -85,7 +85,7 @@ struct HomeSplitView: View {
     @ViewBuilder
     private var emptyState: some View {
         if viewModel.searchText.isEmpty {
-            ContentUnavailableView("No Items", systemImage: "tray")
+            ContentUnavailableView(AppStrings.noItems, systemImage: "tray")
         } else {
             ContentUnavailableView.search(text: viewModel.searchText)
         }
@@ -121,7 +121,7 @@ struct HomeSplitView: View {
                         }
                     }
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(AppStrings.delete, systemImage: "trash")
                 }
                 .disabled(isDeleting)
             }

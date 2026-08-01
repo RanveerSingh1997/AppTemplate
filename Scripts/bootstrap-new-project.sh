@@ -90,6 +90,11 @@ FILES_TO_EDIT=(
   AppTemplate/Config/DevConfig.xcconfig
   AppTemplate/Config/QAConfig.xcconfig
   AppTemplate/Config/ProdConfig.xcconfig
+  # Localizable.xcstrings has an "AppTemplate" key/value pair (AppStrings.appName) that
+  # must stay in sync with the Swift-file rename below, or String(localized:) starts
+  # looking up a key the catalog no longer has (harmless fallback-to-key for English,
+  # but a real gap for any other language added later).
+  AppTemplate/Resources/Localizable.xcstrings
 )
 while IFS= read -r f; do FILES_TO_EDIT+=("$f"); done < <(find AppTemplate AppTemplateTests -name '*.swift')
 

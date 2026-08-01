@@ -33,25 +33,25 @@ enum AppError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .network(.invalidURL):
-            return "The request URL is invalid."
+            return AppStrings.invalidRequestURL
         case .network(.noConnection):
-            return "No internet connection."
+            return AppStrings.noInternetConnection
         case .network(.invalidResponse):
-            return "The server returned an unexpected response."
+            return AppStrings.serverUnexpectedResponse
         case .network(.requestFailed(let statusCode, let message)):
-            return message ?? "The request failed (status \(statusCode))."
+            return message ?? AppStrings.requestFailed(statusCode: statusCode)
         case .network(.decodingFailed):
-            return "Couldn't read the server's response."
+            return AppStrings.couldntReadServerResponse
         case .persistence(.saveFailed):
-            return "Couldn't save your data."
+            return AppStrings.couldntSaveYourData
         case .persistence(.fetchFailed):
-            return "Couldn't load your data."
+            return AppStrings.couldntLoadYourData
         case .persistence(.notFound):
-            return "The requested item couldn't be found."
+            return AppStrings.requestedItemNotFound
         case .validation(.emptyField(let field)):
-            return "\(field) can't be empty."
+            return AppStrings.fieldCannotBeEmpty(field)
         case .validation(.tooLong(let field, let max)):
-            return "\(field) can't be longer than \(max) characters."
+            return AppStrings.fieldTooLong(field, max: max)
         case .configuration(let message), .unknown(let message):
             return message
         }

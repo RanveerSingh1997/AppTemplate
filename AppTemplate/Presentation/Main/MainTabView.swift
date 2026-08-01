@@ -11,13 +11,13 @@ struct MainTabView: View {
                 makeDetailViewModel: dependencies.makeItemDetailViewModel,
                 makeFormViewModel: dependencies.makeAddEditItemViewModel
             )
-            .tabItem { Label("Home", systemImage: "list.bullet") }
+            .tabItem { Label(AppStrings.home, systemImage: "list.bullet") }
 
             SettingsView(
                 viewModel: dependencies.makeSettingsViewModel(),
                 coordinator: dependencies.coordinator
             )
-            .tabItem { Label("Settings", systemImage: "gearshape") }
+            .tabItem { Label(AppStrings.settings, systemImage: "gearshape") }
         }
     }
 }

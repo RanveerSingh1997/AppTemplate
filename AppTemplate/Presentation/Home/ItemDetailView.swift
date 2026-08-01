@@ -10,7 +10,7 @@ struct ItemDetailView: View {
     }
 
     var body: some View {
-        ViewStateView(state: viewModel.state, failureTitle: "Couldn't Load Item") { item in
+        ViewStateView(state: viewModel.state, failureTitle: AppStrings.couldntLoadItem) { item in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.medium) {
                     Text(item.title).font(.title.bold())
@@ -25,7 +25,7 @@ struct ItemDetailView: View {
                     Button {
                         coordinator.presentItemForm(.edit(item))
                     } label: {
-                        Label("Edit", systemImage: "pencil")
+                        Label(AppStrings.edit, systemImage: "pencil")
                     }
                 }
             }

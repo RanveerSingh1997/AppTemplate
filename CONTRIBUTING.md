@@ -43,6 +43,9 @@ section for the full list and reasoning. The short version:
   declares `FormMode<Value>`; a view rendering a `ViewState<Value>` uses `ViewStateView`
   instead of writing its own `switch`. Don't add a fourth near-identical shape — extend
   one of these three, or open an issue first if none of them fit.
+- Every user-facing string is an `AppStrings` symbol (`Domain/AppStrings.swift`) backed by
+  a `Resources/Localizable.xcstrings` entry — never a literal passed straight to
+  `Text`/`Button`/`AppError`/etc. See the README's "Localization" section.
 
 ## Commits and PRs
 
@@ -50,6 +53,7 @@ section for the full list and reasoning. The short version:
   (the README's own commit history is a reasonable model: see `git log`).
 - Update the README alongside any change to the folder structure, architecture rules, or
   shared `Presentation/` types (`ViewState`, `FormMode`, `ViewStateView`,
-  `LoadFailureView`) — it's meant to stay accurate, not just be a first-day snapshot.
+  `LoadFailureView`, `AppStrings`) — it's meant to stay accurate, not just be a first-day
+  snapshot.
 - Run the "Before opening a PR" commands above; CI will re-run them regardless, but
   catching a lint/test failure locally is faster than round-tripping through CI.

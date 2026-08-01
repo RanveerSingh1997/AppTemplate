@@ -7,15 +7,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack(path: $coordinator.settingsPath) {
             Form {
-                Section("About") {
-                    LabeledContent("Version", value: viewModel.appVersion)
-                    LabeledContent("Environment", value: viewModel.environment.rawValue)
+                Section(AppStrings.about) {
+                    LabeledContent(AppStrings.version, value: viewModel.appVersion)
+                    LabeledContent(AppStrings.environment, value: viewModel.environment.rawValue)
                 }
-                Button("About This Template") {
+                Button(AppStrings.aboutThisTemplate) {
                     coordinator.push(.about)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(AppStrings.settings)
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
                 case .about:
@@ -32,14 +32,14 @@ private struct AboutView: View {
             Image(systemName: "app.badge.checkmark")
                 .font(.system(size: 48))
                 .foregroundStyle(.tint)
-            Text("AppTemplate")
+            Text(AppStrings.appName)
                 .font(.title2.bold())
-            Text("A starting point following Clean Architecture: Core, Domain, Data, Presentation. See README.md.")
+            Text(AppStrings.aboutDescription)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
         }
-        .navigationTitle("About")
+        .navigationTitle(AppStrings.about)
     }
 }
 

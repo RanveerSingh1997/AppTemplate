@@ -44,6 +44,9 @@ AppTemplate/
 │   ├── Domain/                  # protocols + models only — imports just Foundation, no
 │   │   │                        # SwiftData/URLSession/SwiftUI (see Architecture rules #4)
 │   │   ├── AppError.swift              # the one error vocabulary every layer throws
+│   │   ├── AppStrings.swift             # every localizable string, one Swift symbol each —
+│   │   │                                # here (not Presentation/Shared) since AppError needs
+│   │   │                                # it too, and Domain can't depend on Presentation
 │   │   ├── Models/                      # Item, Priority — domain-facing shapes
 │   │   ├── Protocols/                   # EntityMapper, LocalTimestamped
 │   │   ├── Repositories/                 # ItemRepository, PriorityRepository (protocols)
@@ -74,7 +77,9 @@ AppTemplate/
 │   │   └── Main/                         # MainTabView
 │   │
 │   └── Resources/
-│       └── Assets.xcassets
+│       ├── Assets.xcassets
+│       └── Localizable.xcstrings         # String Catalog — source language en; see
+│                                          # "Localization" below
 │
 └── AppTemplateTests/              # one test file per production file it covers — see
                                     # "Architecture rules" for what's tested vs. deliberately not
@@ -171,6 +176,10 @@ Follow the `Home`/`Item` example (list, detail, create/edit form, delete):
    for exactly this) — a real `...Impl` still isn't allowed and still fails the build.
    Use `Spacing.small`/`.medium`/`.large` (`Presentation/Shared/Spacing.swift`) for any
    `VStack`/`HStack` spacing instead of a numeric literal.
+8. **Strings**: add a symbol to `Domain/AppStrings.swift` and a matching key to
+   `Resources/Localizable.xcstrings` for any new UI text, then reference `AppStrings.xxx`
+   at the call site — never a literal `"..."` passed straight to `Text`/`Button`/etc. See
+   "Localization" below.
 
 ## What's built but not yet wired in
 
@@ -197,8 +206,6 @@ on them.
 
 ## What's deliberately *not* here (add only when you need it)
 
-- **Localization** — plain string literals for now. Add a String Catalog
-  (`Localizable.xcstrings`) when you actually need a second language.
 - **Auth/login flow** — business-specific; bolt it on as its own feature module
   following the same Domain/Data/Presentation shape. Once it exists, have it call
   `secureStorageService.set(_:forKey: SecureStorageKey.authToken)` after login/refresh —
@@ -403,6 +410,35 @@ lookup data; cache it separately if that ever measurably matters.)
 
 Neither approach requires changing `ViewState` itself — it stays exactly as generic as
 `Presentation/Shared/ViewState.swift` already defines it either way.
+
+## Localization
+
+Every user-facing string is a `Domain/AppStrings.swift` symbol backed by a
+`Resources/Localizable.xcstrings` entry (source language `en`) — add both together for any
+new string, rather than a `String(localized: "...")` literal inline at the call site.
+
+- **View code never changes.** `Text`, `Label`, `Button`, `TextField`, `Section`,
+  `Picker`, `navigationTitle`, `ContentUnavailableView`, and `LabeledContent` all take
+  either `LocalizedStringKey` or a plain `String` — `AppStrings.items` (a `String`) just
+  resolves to the StringProtocol-taking overload of whichever initializer, displaying the
+  already-localized text directly. No `Text(LocalizedStringKey("..."))` ceremony needed.
+- **Domain and Presentation code can't skip localization by using a raw `String`.**
+  `AppError.errorDescription` and `AddEditItemViewModel.navigationTitle` are plain
+  `String`-returning properties, not SwiftUI `Text` calls, so they don't get Xcode's
+  automatic compiler string-extraction — they call `AppStrings.xxx` explicitly instead.
+- **Parameterized messages are functions, not string interpolation.** `AppStrings
+  .fieldCannotBeEmpty(field)` builds `"%@ can't be empty."` via `String(format:)`, so the
+  catalog holds one template entry regardless of what `field` is, instead of a
+  new entry per distinct value interpolation would produce.
+- **Item/Priority data is never localized** — `item.title`, `item.detail`,
+  `priority.name`, and `viewModel.environment.rawValue` (`"Dev"`/`"QA"`/`"Prod"`, a
+  developer-facing distinction, not end-user prose) are content or technical labels, not
+  app chrome, and stay as plain interpolated `String`s passed straight to `Text`.
+
+`Localizable.xcstrings` currently has only `en` (this template's source language) — add a
+language in Xcode (select the catalog, use the Editor menu or the "+" in the Inspector) and
+translate each entry's value when you actually need a second language; nothing else in the
+code changes.
 
 ## Architecture notes
 
