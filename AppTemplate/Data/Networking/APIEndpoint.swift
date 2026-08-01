@@ -15,6 +15,8 @@ enum APIEndpoint {
     /// Reference data for `AddEditItemView`'s priority picker — its own case rather than
     /// piggybacking on an `items`-shaped route, since it's a different resource entirely.
     case fetchPriorities
+    case login
+    case logout
 
     var path: String {
         switch self {
@@ -24,6 +26,10 @@ enum APIEndpoint {
             return "items/\(id)"
         case .fetchPriorities:
             return "priorities"
+        case .login:
+            return "auth/login"
+        case .logout:
+            return "auth/logout"
         }
     }
 
@@ -31,7 +37,7 @@ enum APIEndpoint {
         switch self {
         case .fetchItems, .fetchPriorities:
             return .get
-        case .createItem:
+        case .createItem, .login, .logout:
             return .post
         case .updateItem:
             return .put

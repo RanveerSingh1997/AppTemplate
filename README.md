@@ -25,7 +25,7 @@ AppTemplate/
 │   ├── App/                     # composition root + app shell — the only layer allowed to
 │   │   │                        # know about concrete Data types (see Architecture rules)
 │   │   ├── TemplateApp.swift          # @main
-│   │   ├── AppContainerView.swift     # splash -> main tab switch, startup-error alert
+│   │   ├── AppContainerView.swift     # splash -> login/main-tab switch, startup-error alert
 │   │   └── AppDependencies.swift      # builds every dependency once, exposes make*ViewModel()
 │   │
 │   ├── Config/                  # per-environment xcconfig (Dev/QA/Prod) — bundle id, app
@@ -36,7 +36,8 @@ AppTemplate/
 │   │
 │   ├── Core/                    # infrastructure that isn't Domain/Data/Presentation
 │   │   ├── Config/                    # AppEnvironment, AppConfiguration (reads xcconfig values)
-│   │   ├── Coordinator/                # NavigationCoordinator, AppRoute, ItemFormRoute
+│   │   ├── Coordinator/                # NavigationCoordinator, AppRoute, ItemFormRoute,
+│   │   │                                # AuthSessionStore — see "Authentication"
 │   │   └── Services/
 │   │       ├── Impl/                   # real implementations (Keychain, NWPathMonitor, console,
 │   │       │                           # AlertCenter — see "Alerts & toasts" for its naming)
@@ -48,18 +49,19 @@ AppTemplate/
 │   │   ├── AppStrings.swift             # every localizable string, one Swift symbol each —
 │   │   │                                # here (not Presentation/Shared) since AppError needs
 │   │   │                                # it too, and Domain can't depend on Presentation
-│   │   ├── Models/                      # Item, Priority — domain-facing shapes
+│   │   ├── Models/                      # Item, Priority, AuthSession — domain-facing shapes
 │   │   ├── Protocols/                   # EntityMapper, LocalTimestamped
-│   │   ├── Repositories/                 # ItemRepository, PriorityRepository (protocols)
+│   │   ├── Repositories/                 # ItemRepository, PriorityRepository, AuthRepository
 │   │   └── Services/                     # SecureStorageService, ReachabilityService,
 │   │                                      # EventLogger, AlertService
 │   │
 │   ├── Data/                     # concrete implementations of Domain's protocols
-│   │   ├── DTOs/                        # ItemDTO, PriorityDTO — network shapes
+│   │   ├── DTOs/                        # ItemDTO, PriorityDTO, AuthDTOs — network shapes
 │   │   ├── Mappers/                      # ItemMapper — the one place that knows DTO + persistence shape
 │   │   ├── Networking/                   # APIClient, APIEndpoint, interceptors, retry, pinning, upload
 │   │   ├── Persistence/                   # CachedItem (SwiftData), PersistenceFactory
-│   │   └── Repositories/                   # ItemRepositoryImpl/Mock, PriorityRepositoryImpl/Mock
+│   │   └── Repositories/                   # ItemRepositoryImpl/Mock, PriorityRepositoryImpl/Mock,
+│   │                                        # AuthRepositoryImpl/MockAuthRepositoryImpl
 │   │
 │   ├── Presentation/              # ViewModel + View per feature — depends only on Domain
 │   │   │                          # protocols, never a concrete Data type
@@ -81,6 +83,7 @@ AppTemplate/
 │   │   │   └── AlertCenterOverlay.swift               # renders AlertCenter's alert/toast — see
 │   │   │                                               # "Alerts & toasts"
 │   │   ├── Splash/
+│   │   ├── Auth/                        # LoginViewModel, LoginView — see "Authentication"
 │   │   ├── Home/                        # list/detail/create-edit-delete + search — the main
 │   │   │                                # example feature; HomeScreenData is the composite-
 │   │   │                                # Value example, AddEditItemViewModel.priorityOptions
@@ -227,11 +230,15 @@ on them.
 
 ## What's deliberately *not* here (add only when you need it)
 
-- **Auth/login flow** — business-specific; bolt it on as its own feature module
-  following the same Domain/Data/Presentation shape. Once it exists, have it call
-  `secureStorageService.set(_:forKey: SecureStorageKey.authToken)` after login/refresh —
-  `URLSessionAPIClient` already reads that key on every request (see below), so nothing
-  in the networking layer needs to change.
+- **Token refresh** — `URLSessionAPIClient.authTokenRefresher` is the seam (401 -> refresh
+  -> retry the original request once), but `AppDependencies` passes `nil` since there's no
+  refresh-token concept yet (see "Authentication" — `AuthSession` is just an access token
+  today). Add a `refresh(refreshToken:)` method to `AuthRepository` once your backend
+  issues refresh tokens, and pass a closure calling it as `authTokenRefresher` — nothing
+  else about the request pipeline changes.
+- **Signup, password reset, biometric unlock** — same reasoning: bolt these onto the
+  `Auth`/`AuthRepository` shape `LoginView`/`AuthRepositoryImpl` already establish, rather
+  than growing `LoginViewModel` into a catch-all auth ViewModel.
 
 ## Fixes vs. the app this was templated from
 
@@ -627,6 +634,46 @@ correctly so for a real `...RepositoryImpl`/`...ServiceImpl`, but wrong for pres
 state a root view is meant to own. Everywhere else, inject and call the `AlertService`
 protocol — only `AppContainerView` (the app shell, composition-root-adjacent) and
 `AlertCenterOverlay` itself touch `AlertCenter` concretely.
+
+## Authentication
+
+`AppContainerView` gates the whole app on it: signed out shows `LoginView`, signed in shows
+`MainTabView`, decided by `AuthSessionStore.isAuthenticated`. The pieces, same shape as
+every other feature in this template:
+
+- **Domain**: `AuthSession` (`Domain/Models/`) — just `token` + `email`, not a full user
+  profile; add a separate `User` model if a real app needs name/avatar/roles. `AuthRepository`
+  (`Domain/Repositories/`) — `login(email:password:)`/`logout()`, the same protocol shape as
+  `ItemRepository`.
+- **Data**: `AuthRepositoryImpl` (real, calls `POST auth/login`/`auth/logout` via the shared
+  `APIClient`) and `MockAuthRepositoryImpl` (Dev — accepts one fixed demo credential,
+  `MockAuthRepositoryImpl.demoEmail`/`.demoPassword`, rejects anything else with the same
+  `AppError` a real 401 would produce, so the "wrong password" path is demoable with no
+  backend).
+- **Presentation**: `LoginViewModel` + `LoginView` (`Presentation/Auth/`), built from
+  `ValidatedTextField`/`.buttonStyle(.primary)` — see "Reusable form components". `LoginView`
+  passes `isSecure: true` for the password field.
+
+**`AuthSessionStore` (`Core/Coordinator/AuthSessionStore.swift`), not `LoginViewModel`,
+owns whether you're signed in.** Same reasoning as `AlertCenter`/`NavigationCoordinator`:
+it's live, `@Observable` presentation state a root view (`AppContainerView`) binds to
+directly, not a swappable Data-layer implementation — so `LoginViewModel` depends only on
+the `AuthRepository` protocol and returns a token on success; `LoginView` is the one that
+calls `authSessionStore.signIn(token:)` with it, the same way `AddEditItemView` (not
+`AddEditItemViewModel`) calls `onSaved(saved)`. `AuthSessionStore` itself doesn't touch the
+network — it only tracks/persists whether a token exists, reading/writing it through
+`SecureStorageService` (`SecureStorageKey.authToken` — the same key
+`AuthHeaderInterceptor` already reads on every authenticated request, so nothing in the
+networking layer changes when you swap `MockAuthRepositoryImpl` for the real one).
+`SettingsView`'s "Log Out" button calls `authSessionStore.signOut()` directly, the same way
+it already calls `coordinator.push(.about)` — both are concrete, View-bound state, not
+something a ViewModel mediates.
+
+`demoCredentialsHint` (shown under the Log In button, Dev only) is computed by
+`AppDependencies.makeLoginViewModel()` — the composition root, the only place allowed to
+reference `MockAuthRepositoryImpl` — and passed into `LoginViewModel` as a plain `String?`,
+rather than `LoginViewModel` importing that concrete Data-layer type itself to read
+`.demoEmail`/`.demoPassword` directly.
 
 ## Architecture notes
 

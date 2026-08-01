@@ -13,7 +13,14 @@ struct AppContainerView: View {
     var body: some View {
         Group {
             if isSplashComplete {
-                MainTabView(dependencies: dependencies)
+                if dependencies.authSessionStore.isAuthenticated {
+                    MainTabView(dependencies: dependencies)
+                } else {
+                    LoginView(
+                        viewModel: dependencies.makeLoginViewModel(),
+                        authSessionStore: dependencies.authSessionStore
+                    )
+                }
             } else {
                 SplashView(viewModel: dependencies.makeSplashViewModel()) {
                     isSplashComplete = true

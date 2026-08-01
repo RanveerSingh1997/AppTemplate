@@ -50,6 +50,14 @@ enum AppStrings {
 
     static let home = String(localized: "Home")
 
+    // MARK: - Auth
+
+    static let logIn = String(localized: "Log In")
+    static let logOut = String(localized: "Log Out")
+    static let email = String(localized: "Email")
+    static let password = String(localized: "Password")
+    static let invalidCredentials = String(localized: "Invalid email or password.")
+
     // MARK: - Alerts / toasts
 
     static let ok = String(localized: "OK")

@@ -9,11 +9,18 @@ struct ValidatedTextField: View {
     let title: String
     @Binding var text: String
     var axis: Axis = .horizontal
+    /// Renders a `SecureField` instead of a `TextField` — for a password field. `axis` is
+    /// ignored when this is `true`; `SecureField` has no multiline variant.
+    var isSecure: Bool = false
     var errorMessage: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.small) {
-            TextField(title, text: $text, axis: axis)
+            if isSecure {
+                SecureField(title, text: $text)
+            } else {
+                TextField(title, text: $text, axis: axis)
+            }
             if let errorMessage {
                 Text(errorMessage)
                     .font(Typography.caption)
@@ -32,5 +39,11 @@ struct ValidatedTextField: View {
 #Preview("With error") {
     Form {
         ValidatedTextField(title: "Title", text: .constant(""), errorMessage: "Title can't be empty.")
+    }
+}
+
+#Preview("Secure") {
+    Form {
+        ValidatedTextField(title: "Password", text: .constant("hunter2"), isSecure: true)
     }
 }

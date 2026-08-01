@@ -15,7 +15,8 @@ struct MainTabView: View {
 
             SettingsView(
                 viewModel: dependencies.makeSettingsViewModel(),
-                coordinator: dependencies.coordinator
+                coordinator: dependencies.coordinator,
+                authSessionStore: dependencies.authSessionStore
             )
             .tabItem { Label(AppStrings.settings, systemImage: Icons.settingsTab) }
         }

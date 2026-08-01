@@ -57,6 +57,10 @@ section for the full list and reasoning. The short version:
   `.buttonStyle(.primary/.secondary/.destructive)` — never a hand-rolled `TextField` +
   error `Text` pairing, or ad hoc `.tint(...)`. See the README's "Reusable form components"
   section.
+- Concrete `@Observable` app-shell state a root view binds to directly (`AuthSessionStore`,
+  `NavigationCoordinator`, `AlertCenter`) stays out of ViewModels — a ViewModel returns
+  data (a token, a saved item), the View acts on it. See the README's "Authentication"
+  section for why `LoginViewModel` doesn't hold `AuthSessionStore`.
 
 ## Commits and PRs
 
@@ -65,7 +69,7 @@ section for the full list and reasoning. The short version:
 - Update the README alongside any change to the folder structure, architecture rules, or
   shared `Presentation/` types (`ViewState`, `FormMode`, `ViewStateView`,
   `LoadFailureView`, `AppStrings`, `AlertCenterOverlay`, `Colors`, `Typography`, `Icons`,
-  `ValidatedTextField`, `ButtonStyles`) — it's meant to stay accurate, not just be a
-  first-day snapshot.
+  `ValidatedTextField`, `ButtonStyles`, `AuthSessionStore`) — it's meant to stay accurate,
+  not just be a first-day snapshot.
 - Run the "Before opening a PR" commands above; CI will re-run them regardless, but
   catching a lint/test failure locally is faster than round-tripping through CI.

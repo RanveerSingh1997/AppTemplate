@@ -15,6 +15,9 @@ final class AppDependencies {
     // fake an alert, only to render one. See `AlertCenter`'s doc comment for why it's
     // exposed as this concrete type rather than through the `AlertService` protocol here.
     let alertCenter = AlertCenter()
+    // Real in every environment too — whether you're signed in isn't a dev-vs-prod
+    // concern. Constructed after the `switch` below, once `secureStorageService` exists.
+    let authSessionStore: AuthSessionStore
 
     // Cross-cutting seams: built and available via AppDependencies, but not yet consumed
     // by any feature. Wire one in (pass it into a repository's init, same as `apiClient`)
@@ -25,6 +28,7 @@ final class AppDependencies {
 
     private let itemRepository: ItemRepository
     private let priorityRepository: PriorityRepository
+    private let authRepository: AuthRepository
 
     // A hardcoded, compile-time-valid URL, only ever reached if AppConfiguration.apiBaseURL()
     // itself fails — i.e. a broken xcconfig, not a runtime condition to design around.
@@ -41,6 +45,7 @@ final class AppDependencies {
             // No backend/Keychain friction needed to run the template out of the box.
             itemRepository = MockItemRepositoryImpl()
             priorityRepository = MockPriorityRepositoryImpl()
+            authRepository = MockAuthRepositoryImpl()
             secureStorageService = InMemorySecureStorageService()
             reachabilityService = MockReachabilityService()
             logger = ConsoleEventLogger()
@@ -81,8 +86,11 @@ final class AppDependencies {
 
             itemRepository = ItemRepositoryImpl(apiClient: apiClient, modelContext: container.mainContext)
             priorityRepository = PriorityRepositoryImpl(apiClient: apiClient)
+            authRepository = AuthRepositoryImpl(apiClient: apiClient)
             reachabilityService = ReachabilityServiceImpl()
         }
+
+        authSessionStore = AuthSessionStore(secureStorageService: secureStorageService)
     }
 
     // MARK: - View model factories
@@ -101,6 +109,17 @@ final class AppDependencies {
 
     func makeSettingsViewModel() -> SettingsViewModel {
         SettingsViewModel(environment: environment)
+    }
+
+    func makeLoginViewModel() -> LoginViewModel {
+        let demoCredentialsHint: String?
+        switch environment {
+        case .dev:
+            demoCredentialsHint = "Demo: \(MockAuthRepositoryImpl.demoEmail) / \(MockAuthRepositoryImpl.demoPassword)"
+        case .qa, .prod:
+            demoCredentialsHint = nil
+        }
+        return LoginViewModel(authRepository: authRepository, demoCredentialsHint: demoCredentialsHint)
     }
 
     func makeAddEditItemViewModel(route: ItemFormRoute) -> AddEditItemViewModel {

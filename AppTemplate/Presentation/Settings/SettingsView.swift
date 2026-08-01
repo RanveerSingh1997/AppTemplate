@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     let viewModel: SettingsViewModel
     @Bindable var coordinator: NavigationCoordinator
+    let authSessionStore: AuthSessionStore
 
     var body: some View {
         NavigationStack(path: $coordinator.settingsPath) {
@@ -13,6 +14,9 @@ struct SettingsView: View {
                 }
                 Button(AppStrings.aboutThisTemplate) {
                     coordinator.push(.about)
+                }
+                Button(AppStrings.logOut, role: .destructive) {
+                    authSessionStore.signOut()
                 }
             }
             .navigationTitle(AppStrings.settings)
@@ -44,7 +48,11 @@ private struct AboutView: View {
 }
 
 #Preview {
-    SettingsView(viewModel: SettingsViewModel(environment: .dev), coordinator: NavigationCoordinator())
+    SettingsView(
+        viewModel: SettingsViewModel(environment: .dev),
+        coordinator: NavigationCoordinator(),
+        authSessionStore: AuthSessionStore(secureStorageService: InMemorySecureStorageService())
+    )
 }
 
 #Preview("About") {
