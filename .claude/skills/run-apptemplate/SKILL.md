@@ -40,6 +40,25 @@ then drive the UI:
 ```bash
 D=.claude/skills/run-apptemplate/driver.sh
 "$D" all                        # build + boot simulator + install + launch + wait for first render
+"$D" screenshot /tmp/login.png  # save a screenshot
+```
+
+**`"$D" all` lands on `LoginView`, not the item list** — the whole app is gated behind
+auth (see README's "Authentication"). Log in with the on-screen demo credentials before
+anything else (coordinates below are point-space, verified against the login screen's
+`describe` output — re-run `describe` if a layout change moves them):
+
+```bash
+"$D" tap 201 487                    # Email field
+"$D" text "demo@example.com"
+"$D" tap 201 521                    # Password field
+"$D" text "password"
+"$D" tap 201 565                    # Log In button
+```
+
+Now the item list is reachable:
+
+```bash
 "$D" screenshot /tmp/home.png   # save a screenshot
 "$D" describe                   # dump the accessibility tree (point coords, not pixels)
 "$D" tap 369 83                 # tap a point — get coordinates from `describe` or a screenshot
@@ -49,6 +68,13 @@ D=.claude/skills/run-apptemplate/driver.sh
 xcrun simctl openurl booted "apptemplate://items/42"  # deep link — not a driver.sh
                                                         # subcommand, plain simctl works fine
 ```
+
+**The login step is needed after every `terminate`, not just after `uninstall`** —
+verified by relaunching without uninstalling first and landing back on `LoginView`. The
+Dev build's `AuthSessionStore` reads/writes `InMemorySecureStorageService` (see
+`AppDependencies`), which is wiped whenever the process exits; only the real
+`KeychainSecureStorageService` (QA/Prod) would survive a relaunch. Budget the login step
+into every fresh `"$D" all`/`"$D" launch`, not just a first-ever install.
 
 Screenshot pixel dimensions are 3x the point coordinates `tap`/`describe` use
 (iPhone 17 Simulator: 1206x2622px screenshot, 402x874pt UI). Divide screenshot
