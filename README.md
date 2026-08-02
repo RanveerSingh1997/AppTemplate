@@ -367,17 +367,30 @@ SwiftData's types in the first place.
 
 **`SwiftDataStore<Entity: PersistentModel>`** is a second, smaller layer underneath that:
 generic fetch/insert/delete against any `@Model` type, so `SwiftDataItemCache` calls
-`store.fetch()` instead of writing `modelContext.fetch(FetchDescriptor<CachedItem>())` at
-each of its call sites. `fetch(_:)` takes an optional `FetchDescriptor<Entity>` — pass one
-with a `predicate` to query by field instead of fetching every row and scanning in Swift;
-`SwiftDataItemCache.fetchByID`/`delete` do exactly that against `CachedItem`'s unique `id`,
-where `upsert`/`pruneStale` still call `store.fetch()` with no predicate since they
-genuinely need every cached row to diff against. It's still SwiftData-specific —
-`PersistentModel`/`FetchDescriptor`/`#Predicate` are SwiftData's own vocabulary, so this
-doesn't (and isn't meant to) hide *that* framework dependency the way `ItemCache` hides it
-from `ItemRepositoryImpl`. It exists to remove the boilerplate repetition of working with
-SwiftData directly, not to make SwiftData itself swappable — `ItemCache` is what does that.
-Add a second `SwiftData*Cache` for another entity later and it reuses the same store.
+`store.fetch()`/`store.first(withID:)` instead of writing
+`modelContext.fetch(FetchDescriptor<CachedItem>(...))` at each of its call sites.
+`first(withID:)` — a `FetchDescriptor` predicate + `fetchLimit`, not a full fetch scanned
+in Swift — is itself generic, available on any `Entity: Identifiable` whose `ID` is
+`Codable & Sendable` (`CachedItem.id: String` qualifies); `SwiftDataItemCache.fetchByID`/
+`delete` use it, and so does `upsert` when it's given exactly one DTO (`createItem`/
+`updateItem`'s case — no reason to fetch every cached row to look up one). `upsert`/
+`pruneStale` fall back to `store.fetch()` with no predicate only when they're given
+*multiple* DTOs (`fetchItems`/`fetchMoreItems`'s case), since a single bulk fetch + an
+in-memory dictionary lookup beats issuing `N` separate predicate queries for a whole page.
+`SwiftDataStore` is still SwiftData-specific — `PersistentModel`/`FetchDescriptor`/
+`#Predicate` are SwiftData's own vocabulary, so it doesn't (and isn't meant to) hide *that*
+framework dependency the way `ItemCache` hides it from `ItemRepositoryImpl`. It exists to
+remove the boilerplate repetition of working with SwiftData directly, not to make SwiftData
+itself swappable — `ItemCache` is what does that. Add a second `SwiftData*Cache` for
+another entity later and it reuses the same store, `first(withID:)` included for free as
+long as that entity is `Identifiable` too.
+
+**The `Entity.ID: Codable & Sendable` constraint on `first(withID:)` isn't optional
+ceremony** — `Identifiable`'s own `ID: Hashable` isn't enough for `#Predicate`'s macro
+expansion to build a valid `StandardPredicateExpression`; without `Codable` too, it fails
+to compile with a cryptic error pointing at the macro expansion, not the actual missing
+constraint. Found by trying it, not by reading ahead — see `SwiftDataStore.swift`'s own
+doc comment on that extension for the exact error text.
 
 `ItemMapper` (`Data/Mappers/ItemMapper.swift`) also takes `SwiftDataStore<CachedItem>`
 rather than a raw `ModelContext`, for the insert its `toEntity` does — so `SwiftDataItemCache`

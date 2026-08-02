@@ -16,6 +16,16 @@ struct SwiftDataItemCache: ItemCache {
     }
 
     func upsert(_ dtos: [ItemDTO]) {
+        // createItem/updateItem upsert exactly one DTO — a single predicate-based lookup
+        // (like fetchByID/delete use) beats fetching every cached row for a one-row check.
+        guard dtos.count > 1 else {
+            if let dto = dtos.first {
+                upsertOne(dto)
+            }
+            return
+        }
+        // fetchItems/fetchMoreItems upsert a whole page at once — here, one bulk fetch +
+        // an in-memory dictionary lookup beats issuing a separate predicate query per DTO.
         let existing = (try? store.fetch()) ?? []
         let existingByID = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
 
@@ -25,6 +35,14 @@ struct SwiftDataItemCache: ItemCache {
             } else {
                 _ = mapper.toEntity(dto: dto, store: store)
             }
+        }
+    }
+
+    private func upsertOne(_ dto: ItemDTO) {
+        if let entity = try? store.first(withID: dto.id) {
+            _ = mapper.updateEntity(entity, with: dto)
+        } else {
+            _ = mapper.toEntity(dto: dto, store: store)
         }
     }
 
@@ -48,21 +66,13 @@ struct SwiftDataItemCache: ItemCache {
     }
 
     func fetchByID(_ id: String) -> Item? {
-        try? fetchEntity(id: id)?.asDomain
+        let match = try? store.first(withID: id)
+        return match?.asDomain
     }
 
     func delete(id: String) {
-        if let existing = try? fetchEntity(id: id) {
+        if let existing = try? store.first(withID: id) {
             store.delete(existing)
         }
-    }
-
-    /// Queries by `CachedItem`'s unique `id` directly (a `FetchDescriptor` predicate +
-    /// `fetchLimit`), instead of fetching every cached row and scanning for a match in
-    /// Swift the way `fetchAll(matching:)`'s search does.
-    private func fetchEntity(id: String) throws -> CachedItem? {
-        var descriptor = FetchDescriptor<CachedItem>(predicate: #Predicate { $0.id == id })
-        descriptor.fetchLimit = 1
-        return try store.fetch(descriptor).first
     }
 }

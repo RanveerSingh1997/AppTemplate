@@ -24,6 +24,11 @@ final class CachedItem {
 
 extension CachedItem: LocalTimestamped {}
 
+/// Its existing `id: String` already satisfies this — declared explicitly so
+/// `SwiftDataStore<CachedItem>.first(withID:)` (a generic, `Identifiable`-constrained
+/// query) is available.
+extension CachedItem: Identifiable {}
+
 extension CachedItem {
     var asDomain: Item { Item(id: id, title: title, detail: detail, priorityID: priorityID) }
 }
