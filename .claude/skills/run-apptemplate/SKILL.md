@@ -93,7 +93,7 @@ print(next(x['udid'] for v in d['devices'].values() for x in v if x['name']==nam
 ")" -derivedDataPath build test
 ```
 
-57 tests in 10 suites, ~1s runtime, all pass. (The device-resolution one-liner above
+78 tests in 14 suites, ~1s runtime, all pass. (The device-resolution one-liner above
 duplicates `driver.sh`'s internal `udid()` helper since `xcodebuild test` needs a
 `-destination` flag the driver doesn't expose as a subcommand — simplest to inline it.)
 

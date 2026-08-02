@@ -333,7 +333,13 @@ starting sketch. Every piece below is a real, tested implementation, not a stub:
 Tested directly (not just through the mock repository) in
 `AppTemplateTests/URLSessionAPIClientTests.swift`, which stubs `URLProtocol` to exercise
 the auth header, error-message decoding, and retry-policy logic against real (intercepted)
-HTTP round-trips.
+HTTP round-trips. `PinnedCertificateValidatorTests.swift` separately tests
+`PinnedCertificateValidator.publicKeyHash(for:)` against a real (throwaway, offline)
+certificate's `SecTrust` — this is what caught the class's own doc comment documenting the
+wrong `openssl` recipe (SPKI encoding instead of raw PKCS#1) for computing a pin hash,
+which would have silently rejected every connection to a real backend if followed as
+written. Security-critical code with no test is a bug waiting to ship unnoticed; this one
+nearly did, in the doc comment meant to help someone configure it correctly.
 
 ## Persistence (`Data/Persistence/`)
 
