@@ -2,13 +2,18 @@ import Foundation
 
 final class MockPriorityRepositoryImpl: PriorityRepository {
     private let priorities: [Priority]
+    /// Set in tests that need `fetchPriorities` to fail deterministically (e.g. simulating
+    /// offline) — nil (never throws) for normal dev use.
+    private let fetchError: Error?
 
-    init(priorities: [Priority] = MockPriorityRepositoryImpl.samplePriorities) {
+    init(priorities: [Priority] = MockPriorityRepositoryImpl.samplePriorities, fetchError: Error? = nil) {
         self.priorities = priorities
+        self.fetchError = fetchError
     }
 
     func fetchPriorities() async throws -> [Priority] {
-        priorities
+        if let fetchError { throw fetchError }
+        return priorities
     }
 
     static let samplePriorities: [Priority] = [

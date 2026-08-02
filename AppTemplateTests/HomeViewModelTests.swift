@@ -184,6 +184,25 @@ struct HomeViewModelTests {
     }
 
     @Test
+    func priorityFetchFailureShowsAnAlertAndStillLoadsItemsUnlabeled() async {
+        let priorityRepository = MockPriorityRepositoryImpl(fetchError: AppError.network(.noConnection))
+        let alertService = SpyAlertService()
+        let viewModel = makeViewModel(priorityRepository: priorityRepository, alertService: alertService)
+
+        await viewModel.load()
+
+        // The point of ItemRepositoryImpl's offline cache fallback is defeated if a
+        // priorities failure blanks the whole screen anyway — items must still load.
+        guard case .loaded(let data) = viewModel.state else {
+            Issue.record("Expected .loaded state (items unaffected by priorities failing), got \(viewModel.state)")
+            return
+        }
+        #expect(!data.items.isEmpty)
+        #expect(data.priorities.isEmpty)
+        #expect(alertService.alertTitles == [AppStrings.couldntLoadPriorities])
+    }
+
+    @Test
     func deletingSameItemTwiceConcurrentlyOnlyCallsRepositoryOnce() async {
         let repository = MockItemRepositoryImpl(artificialDelay: .milliseconds(50))
         let viewModel = makeViewModel(repository: repository)

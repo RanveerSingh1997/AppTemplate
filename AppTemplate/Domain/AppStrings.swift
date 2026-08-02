@@ -20,6 +20,7 @@ enum AppStrings {
     static let noItems = String(localized: "No Items")
     static let couldntLoadItems = String(localized: "Couldn't Load Items")
     static let couldntLoadMoreItems = String(localized: "Couldn't Load More Items")
+    static let couldntLoadPriorities = String(localized: "Couldn't Load Priorities")
     static let delete = String(localized: "Delete")
 
     // MARK: - Item detail / add-edit form

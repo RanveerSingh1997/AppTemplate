@@ -133,6 +133,17 @@
         }
       }
     },
+    "Couldn't Load Priorities" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't Load Priorities"
+          }
+        }
+      }
+    },
     "Couldn't Open Local Storage" : {
       "extractionState" : "manual",
       "localizations" : {

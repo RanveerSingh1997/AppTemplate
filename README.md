@@ -478,12 +478,12 @@ fields, so the priority picker loads concurrently with (not blocking, and not bl
 the rest of the sheet appearing. Add a third fetched thing (categories, assignees,
 whatever) the same way: one more `ViewState<Y>` property, one more `.task`.
 
-**When to reach for a composite `Value` instead**: if two or more fetches must always
-load/fail/refresh *together* — there's no sensible way to show the screen with only one
-of them loaded — bundle them into one struct and fetch that as a unit instead of
-juggling N independent `ViewState` properties. `HomeViewModel`/`HomeScreenData` are the
-concrete example: showing an item's priority *label* (not just its raw `priorityID`) needs
-both the item list and the priority lookup resolved before the list is meaningful.
+**When to reach for a composite `Value` instead**: if two or more fetches build one
+screen's worth of data and there's no sensible `Value` with only one of them loaded, bundle
+them into one struct and fetch that as a unit instead of juggling N independent `ViewState`
+properties. `HomeViewModel`/`HomeScreenData` are the concrete example: showing an item's
+priority *label* (not just its raw `priorityID`) needs both the item list and the priority
+lookup.
 
 ```swift
 // Presentation/Home/HomeScreenData.swift
@@ -498,14 +498,41 @@ private(set) var state: ViewState<HomeScreenData> = .loading
 
 func load() async {
     state = state.value.map(ViewState.refreshing) ?? .loading
-    async let items = repository.fetchItems(search: search)
-    async let priorities = priorityRepository.fetchPriorities()
-    state = .loaded(HomeScreenData(items: try await items, priorities: try await priorities))
+    async let itemsTask = repository.fetchItems(search: search)
+    async let prioritiesTask = priorityRepository.fetchPriorities()
+    do {
+        let items = try await itemsTask
+        let priorities: [Priority]
+        do {
+            priorities = try await prioritiesTask
+        } catch {
+            alertService.showAlert(title: AppStrings.couldntLoadPriorities, message: error.localizedDescription)
+            priorities = []
+        }
+        state = .loaded(HomeScreenData(items: items, priorities: priorities))
+    } catch {
+        state = .failed(error.localizedDescription)
+    }
 }
 ```
 
-`async let` starts both fetches concurrently and cancels whichever hasn't finished if the
-other throws — no orphaned request on failure. `HomeSplitView` reads `data.priorityName(for:)`
+**Bundling two fetches into one `Value` doesn't mean they have to fail *together*.** Items
+are essential — `HomeScreenData` isn't meaningful without them, so a failed items fetch is
+`.failed`, same as any single-`ViewState` screen. Priorities are secondary — they only
+upgrade each row from "unlabeled" to "labeled" — so a failed priorities fetch alerts and
+degrades to `priorities: []` (which `priorityName(for:)` already handles fine) rather than
+blanking a list that loaded successfully. This asymmetry matters concretely here:
+`ItemRepositoryImpl` has an offline cache fallback and `PriorityRepositoryImpl` deliberately
+doesn't (see its own doc comment) — treating both fetches as equally load-bearing would
+mean going offline defeats that cache fallback every time, since the *unrelated* priorities
+fetch would fail the whole screen regardless of whether items themselves loaded fine. Decide
+this per fetch, not by rule: if both truly are essential (there's genuinely nothing useful
+to show with only one), let both failures reach the outer `catch` instead of swallowing one.
+
+Both fetches still start concurrently via `async let` — nesting the priorities `do`/`catch`
+inside the outer one only changes how each *result* is handled once both are in flight, not
+when they start; sequencing the `await`s themselves would turn `max(items-time,
+priorities-time)` latency into their sum. `HomeSplitView` reads `data.priorityName(for:)`
 to show each row's priority as a subtitle. (One deliberate simplification: `load()` re-fetches
 priorities on every reload, including every debounced search — fine while that's cheap
 lookup data; cache it separately if that ever measurably matters.)

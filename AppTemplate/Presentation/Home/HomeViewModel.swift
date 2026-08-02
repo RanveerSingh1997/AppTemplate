@@ -43,17 +43,32 @@ final class HomeViewModel {
         // Only the true first load, with nothing yet to show, uses `.loading`.
         state = state.value.map(ViewState.refreshing) ?? .loading
         hasMoreItems = true
+        let search = searchText.isEmpty ? nil : searchText
+        // Both fetches start concurrently — kept as separate `async let`s (not sequential
+        // awaits) even though they're now awaited in separate do/catch blocks below, so
+        // total latency stays max(items, priorities) instead of their sum.
+        // ponytail: re-fetches priorities on every reload, including every debounced
+        // search, even though priority lookup data rarely changes. Fine while it's
+        // cheap; cache it separately (fetch once, reuse across reloads) if that ever
+        // measurably matters.
+        async let itemsTask = repository.fetchItems(search: search)
+        async let prioritiesTask = priorityRepository.fetchPriorities()
         do {
-            let search = searchText.isEmpty ? nil : searchText
-            // Both fetches start concurrently; `async let` cancels whichever hasn't
-            // finished if the other throws, so no orphaned request on failure.
-            // ponytail: re-fetches priorities on every reload, including every debounced
-            // search, even though priority lookup data rarely changes. Fine while it's
-            // cheap; cache it separately (fetch once, reuse across reloads) if that
-            // ever measurably matters.
-            async let items = repository.fetchItems(search: search)
-            async let priorities = priorityRepository.fetchPriorities()
-            state = .loaded(HomeScreenData(items: try await items, priorities: try await priorities))
+            let items = try await itemsTask
+            // A failed priorities fetch degrades to unlabeled items instead of blanking
+            // the whole screen to `.failed` — `ItemRepositoryImpl` has an offline cache
+            // fallback that this would otherwise defeat every time you're offline, since
+            // `PriorityRepositoryImpl` deliberately has no cache of its own (see its doc
+            // comment) and `HomeScreenData.priorityName(for:)` already handles an empty
+            // `priorities` array fine.
+            let priorities: [Priority]
+            do {
+                priorities = try await prioritiesTask
+            } catch {
+                alertService.showAlert(title: AppStrings.couldntLoadPriorities, message: error.localizedDescription)
+                priorities = []
+            }
+            state = .loaded(HomeScreenData(items: items, priorities: priorities))
         } catch {
             // `error.localizedDescription` already surfaces `AppError.errorDescription`
             // (via `LocalizedError` bridging) for our own errors, and a reasonable system
